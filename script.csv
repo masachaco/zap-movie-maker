@@ -1,0 +1,21 @@
+# BGMを指定
+bgm,./resource/bgm/bgm01.wav,
+
+# 立ち絵を指定
+char,./resource/character/tachie-normal.png,
+
+# メイン動画を指定
+main_visual, ./resource/movie/sample_movie.mp4,
+
+# 効果音を鳴らす
+se,./resource/se/ポン.wav,
+
+# テキストをテロップに表示して読み上げる
+voice,これはサンプルテキストです,
+
+# 0.5秒無音を入れる
+wait,0.5,
+
+# テロップのみ表示する
+text,声を再生せずにテロップを表示することもできます,
+wait,0.5,

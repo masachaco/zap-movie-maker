@@ -1,0 +1,45 @@
+# プレビューモード
+preview: 
+  enable: false
+  # プレビューとして　切り出しを開始する時間
+  start: 1
+  # プレビューとして　切り出しを終了する時間
+  end: 1.2
+
+# NVIDIAのGPUが搭載されていれば対応したエンコーダを使うと出力が速くなります
+hasNvidiaGpu: False
+# 並列実行させる数。(だいたいの場合CPUのコア数を指定)
+numOfThread: null
+# 動画設定
+movie:
+  additional_time: 0
+  # 出力ファイル名(拡張子は自動で付与されます)
+  output_filename: テスト動画
+
+  # 背景画像の設定
+  background:
+    # 背景画像のパス
+    image_path: ./resource/bg/default_bg.png
+    # メイン動画を表示する範囲(左斜め上)
+    main_vision_left_top_x: 37
+    main_vision_left_top_y: 20
+    # メイン動画を表示する範囲(右斜め下)
+    main_vision_right_bottom_x: 934
+    main_vision_right_bottom_y: 544
+
+  # キャラクタに関する設定
+  # TODO: これはcsvで指定するようにする
+  character:
+    # キャラクタの描画位置(左端)
+    x: 1000
+    y: 320
+    # キャラクタのサイズ
+    resize: 0.3
+
+  text:
+    # Linux等の場合は別途日本語が使用できるフォントを指定してください
+    # ex. https://fonts.google.com/noto/specimen/Noto+Sans+JP
+    font_normal: C:\Windows\Fonts\meiryo.ttc
+    font_size: 25
+    x: 22
+    y: 618
