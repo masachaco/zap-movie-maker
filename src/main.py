@@ -482,7 +482,7 @@ def gen_movie():
 
     # 動画を出力する
     final.write_videofile(
-        get_path(f'./output/{CONFIG["movie"]["output_filename"]}.avi'),
+        get_path(f'./output/{CONFIG["movie"]["output_filename"]}'),
         # NVIDIAのGPUが使えたらその設定を使う
         codec="h264_nvenc" if CONFIG["hasNvidiaGpu"] else "libx264",
         preset= "fast" if CONFIG["hasNvidiaGpu"] else "ultrafast",
