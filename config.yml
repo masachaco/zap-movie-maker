@@ -13,7 +13,7 @@ numOfThread: null
 # 動画設定
 movie:
   additional_time: 0
-  # 出力ファイル名(拡張子は自動で付与されます)
+  # 出力ファイル名
   output_filename: テスト動画.mp4
 
   # 背景画像の設定

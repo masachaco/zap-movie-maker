@@ -15,12 +15,15 @@
 <br/>
 
 ### ■ Image Magickのインストール
-ImageMagickのポータブル版をダウンロードして、中身を「./image_magick」配下に全て置いてください
+`Windowsを利用している場合、` ImageMagickのポータブル版をダウンロードして、中身を「./image_magick」配下に全て置いてください
 「./image_magick」直下に「magick.exe」等が配置される構成になります
 現在、「ImageMagick-7.1.0-portable-Q16-HDRI-x64.zip」での動作を確認しています
 
 Image Magick
 https://imagemagick.org/script/download.php
+
+
+`Linuxを利用している場合、` それぞれのディストリビューションの手順に従ってImageMagickをインストールしてください。
 <br/><br/>
 
 ### ■ VOICEVOXのインストール
@@ -152,5 +155,24 @@ char,(表示したい立ち絵)
 [例]
 ```
 char,./resource/character/tachie-normal.png,
-``
+```
 <br/><br/>
+
+# Configファイルについて
+
+`config.yml` が設定ファイルです
+<br/><br/>
+
+## ■　プレビューモード
+
+`preview.enable` を有効にすると、 `preview.start` から `preview.end` までの範囲を書き出します。時間の単位は秒です。
+<br/><br/>
+
+## ■　GPUエンコードを有効化
+NVIDIAのGPUを搭載している場合 `hasNvidiaGpu` を `true` にすると、動画の書き出しが高速化する場合があります。
+対応していない場合エラーで終了してしまうので、`false` を設定してください
+
+##  ■　Linuxで使用する場合
+
+日本語に対応したフォントをインストールして、 `movie.text.font_normal` にそのフォントのパスを指定してください。
+
