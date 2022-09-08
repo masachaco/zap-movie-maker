@@ -39,7 +39,8 @@ movie:
   text:
     # Linux等の場合は別途日本語が使用できるフォントを指定してください
     # ex. https://fonts.google.com/noto/specimen/Noto+Sans+JP
-    font_normal: C:\Windows\Fonts\meiryo.ttc
+    # font_normal: C:\Windows\Fonts\meiryo.ttc
+    font_normal: ./resource/fonts/Noto_Sans_JP/NotoSansJP-Bold.otf
     font_size: 25
     x: 22
     y: 618

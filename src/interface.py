@@ -1,3 +1,4 @@
+import moviepy
 from moviepy.editor import *
 import requests
 import os
@@ -245,9 +246,14 @@ class TelopOptions:
         self.textSize = textSize
 
 class Character:
-    def __init__(self, voicevoxOptions: VoicevoxOptions = VoicevoxOptions(), telopOptions: TelopOptions = TelopOptions()):
+    def __init__(self, 
+                voicevoxOptions: VoicevoxOptions = VoicevoxOptions(), 
+                telopOptions: TelopOptions = TelopOptions(), 
+                image_path: str = "./resource/character/tachie-normal.png"
+        ):
         self.voicevoxOptions = voicevoxOptions
         self.telopOptions = telopOptions
+        self.image_path = image_path
 
 class Clip:
     config = None
@@ -264,6 +270,63 @@ class Clip:
         "bgm_clips": [],
         "character_clips": [],
     }
+
+    @classmethod
+    def is_imagefile(cls, filetype):
+        """
+            簡易的に画像のファイルタイプを判定
+        """
+        return filetype == "png" or filetype == "jpg" or filetype == "jpeg" or filetype == "gif"
+
+    @classmethod
+    def main_visual_resize_ratio(cls, width, height):
+        """
+            メインビジュアルに表示する動画の拡大・縮小率を取得する
+        """
+
+        top_x = Clip.config["movie"]["background"]["main_vision_left_top_x"]
+        top_y = Clip.config["movie"]["background"]["main_vision_left_top_y"]
+        bottom_x = Clip.config["movie"]["background"]["main_vision_right_bottom_x"]
+        bottom_y = Clip.config["movie"]["background"]["main_vision_right_bottom_y"]
+
+        bg_width = bottom_x - top_x
+        bg_height = bottom_y - top_y
+        height_ratio = bg_height / height
+        width_ratio = bg_width / width
+        return width_ratio if width_ratio > height_ratio else height_ratio
+
+
+    @classmethod
+    def create_main_visual_clip(cls, clips, current_duration, movie_filepath):
+        """
+            メインビジュアルにに使用するクリップを作成する
+        """
+
+        # この動画の前に再生している動画の再生時間を、この動画を再生するまでに伸ばす
+        if len(clips) > 0:
+            past_movie = clips[-1]
+            past_movie_duration = current_duration - past_movie.start
+            clips[-1] = past_movie.set_duration(past_movie_duration)
+
+        filetype = movie_filepath.split(".")[-1].lower()
+
+        main_visual_clip = None
+        if (Clip.is_imagefile(filetype)):
+            main_visual_clip = ImageClip(movie_filepath).set_start(current_duration).set_duration(1)
+        else:
+            main_visual_clip = VideoFileClip(movie_filepath).set_start(current_duration).set_duration(1)
+        
+        # メインビジュアルの表示位置(左端)
+        x = Clip.config["movie"]["background"]["main_vision_left_top_x"]
+        y = Clip.config["movie"]["background"]["main_vision_left_top_y"]
+        main_visual_potision = (x, y)
+        main_visual_clip = main_visual_clip.set_position(main_visual_potision)
+
+        # 動画サイズを自動調整する
+        ratio = Clip.main_visual_resize_ratio(main_visual_clip.w, main_visual_clip.h)
+        main_visual_clip = moviepy.video.fx.resize.resize(main_visual_clip, ratio, ratio)
+        main_visual_clip = main_visual_clip.fx(moviepy.audio.fx.all.volumex, 0)
+        return main_visual_clip
 
     @classmethod
     def create_text_clip(cls, text_clip_options, current_duration, has_audio):
@@ -306,6 +369,55 @@ class Clip:
             txtclip = txtclip.set_audio(audioclip)
 
         return txtclip.set_start(t=current_duration, change_end=True)
+    
+    @classmethod
+    def create_audio_clip(cls, audio_clip_options, current_duration, volume):
+        """
+        オーディオクリップを作成する
+        """
+        file_path = audio_clip_options["file_path"]
+        bgm = AudioFileClip(file_path)
+
+        # TODO: 一旦透明なテキストクリップを使ってしまったけど別途オーディオだけ再生することができるはず
+        bgmclip = TextClip(
+            " ",
+            size=(1, 1),
+            align="West",
+            fontsize=30,
+            font=get_path(Clip.config["movie"]["text"]["font_normal"]),
+            color="white",
+        )
+        bgmclip = bgmclip.set_duration(float(bgm.duration))
+        bgmclip = bgmclip.set_audio(bgm).set_start(t=current_duration, change_end=True)
+        bgmclip = bgmclip.fx(moviepy.audio.fx.all.volumex, volume)
+        return bgmclip
+
+
+    @classmethod
+    def create_character_clip(slc, clips, current_duration, movie_filepath):
+        """
+        立ち絵クリップを作成する
+        """
+
+        # この立ち絵の前に再生している立ち絵の再生時間を、この立ち絵を再生するまでに伸ばす
+        if len(clips) > 0:
+            past_char = clips[-1]
+            past_char_duration = current_duration - past_char.start
+            clips[-1] = past_char.set_duration(past_char_duration)
+
+        char_clip = ImageClip(movie_filepath).set_duration(1)
+
+        # 立ち絵を拡大・縮小
+        ratio = Clip.config["movie"]["character"]["resize"]
+        char_clip = moviepy.video.fx.resize.resize(char_clip, ratio, ratio)
+
+        # 立ち絵の表示位置
+        x = Clip.config["movie"]["character"]["x"]
+        y = Clip.config["movie"]["character"]["y"]
+        char_position = (x,y)
+        char_clip = char_clip.set_start(current_duration).set_position(char_position)
+
+        return char_clip
 
 
     @classmethod
@@ -337,7 +449,66 @@ class Clip:
             }
         })
         print(Clip.scripts[-1])
-        
+
+    @classmethod
+    def text(cls, telop :str,say :str = None) -> None:
+        if say is None:
+            say = telop
+
+
+        Clip.scripts.append({
+            "command": "text",
+            "telop": telop,
+            "say": say,
+            "voice_engine": "voicevox",
+            "voice_option": {
+                "pitch": Clip.current_character.voicevoxOptions.pitch,
+                "speed": Clip.current_character.voicevoxOptions.speed,
+                "intonation": Clip.current_character.voicevoxOptions.intonation,
+                "speaker_id": Clip.current_character.voicevoxOptions.speaker_id,
+            }
+        })
+        print(Clip.scripts[-1])
+
+    @classmethod
+    def main_visual(cls, path):
+        Clip.scripts.append({
+            "command": "main_visual",
+            "filepath": path,
+        })
+
+    @classmethod
+    def char(cls, character: Character = Character()):
+        Clip.scripts.append({
+            "command": "char",
+            "image_path": character.image_path
+        })
+        pass
+
+    @classmethod
+    def bgm(cls, file_path):
+        Clip.scripts.append({
+            "command": "bgm",
+            "file_path": file_path
+        })
+        pass
+
+    @classmethod
+    def se(cls, file_path):
+        Clip.scripts.append({
+            "command": "se",
+            "file_path": file_path
+        })
+        pass
+
+
+    @classmethod
+    def wait(cls, duration):
+        Clip.scripts.append({
+            "command": "wait",
+            "duration": duration
+        })
+        pass
 
     @classmethod
     def create_movie(cls):
@@ -360,8 +531,13 @@ class Clip:
             command = script["command"]
             print("command:", command)
             if command == "main_visual":
+                main_visual_clip = Clip.create_main_visual_clip(Clip.movie["main_visual_clips"], Clip.movie["current_duration"], script["filepath"])
+                Clip.movie["main_visual_clips"].append(main_visual_clip)
                 pass
             if command == "char":
+                # TODO: ここ修正
+                character_clip = Clip.create_character_clip(Clip.movie["character_clips"], Clip.movie["current_duration"], script["image_path"])
+                Clip.movie["character_clips"].append(character_clip)
                 pass
             if command == "voice":
                 txtclip = Clip.create_text_clip(script, Clip.movie["current_duration"], True)
@@ -369,12 +545,22 @@ class Clip:
                 Clip.movie["text_clips"].append(txtclip)
                 pass
             if command == "text":
+                txtclip = Clip.create_text_clip(script, Clip.movie["current_duration"], False)
+                Clip.movie["current_duration"] += txtclip.duration
+                Clip.movie["text_clips"].append(txtclip)
                 pass
             if command == "bgm":
+                bgmclip = Clip.create_audio_clip(script, Clip.movie["current_duration"], 0.1)
+                Clip.movie["bgm_clips"].append(bgmclip)
                 pass
             if command == "se":
+                seclip = Clip.create_audio_clip(script, Clip.movie["current_duration"], 0.3)
+                Clip.movie["se_clips"].append(seclip)
                 pass
             if command == "wait":
+                # wait_clip = Clip.create_wait(script, Clip.movie["current_duration"])
+                Clip.movie["current_duration"] += float(script["duration"])
+                # Clip.movie["wait_clips"].append(wait_clip)
                 pass
 
         # 動画の総再生時間
@@ -461,33 +647,21 @@ class Clip:
         )
 
 def main():
-    # 四国めたんちゃん設定
-    vop = VoicevoxOptions(speakerName="四国めたん", speakerStyle="ノーマル")
-    top = TelopOptions(textColor="black")
-    Clip.set_character("四国めたん", Character(vop,top))
+    # BGMとメイン動画を設定
+    Clip.bgm("./resource/bgm/bgm01.wav")
+    Clip.main_visual("./resource/movie/sample_movie.mp4")
 
     # ずんだもん設定
     vop = VoicevoxOptions(speakerName="ずんだもん", speakerStyle="ノーマル")
     top = TelopOptions(textColor="green")
     Clip.set_character("ずんだもん", Character(vop,top))
-
-    # 怒ったずんだもん設定
-    vop = VoicevoxOptions(speakerName="ずんだもん", speakerStyle="ツンツン",speed=1.3)
-    top = TelopOptions(textColor="green")
-    Clip.set_character("怒ったずんだもん", Character(vop,top))
-
-    Clip.chanege_character("四国めたん")
-    Clip.voice("こんにちは、四国めたんです")
-
     Clip.chanege_character("ずんだもん")
-    Clip.voice("こんにちは、ずんだもんです")
-    Clip.voice("こんな感じにプログラマブルに会話を設定できます")
+
+    for i in range(3):
+        Clip.voice(f"{i}個めのセリフ")
+        Clip.wait(0.5)
     
-    Clip.chanege_character("怒ったずんだもん")
-    Clip.voice("ここは、怒った感じで早口設定なのだ")
-
-    Clip.chanege_character("ずんだもん")
-    Clip.voice("元に戻したりもできるのだ")
+    Clip.voice("こんな感じでコードを組み込んで文章の生成もできるのだ")
 
     Clip.create_movie()
 
