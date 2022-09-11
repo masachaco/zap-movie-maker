@@ -204,7 +204,8 @@ class VoicevoxOptions:
     def __init__(
             self, 
             speakerName :str = "四国めたん", 
-            speakerStyle :str = "ノーマル",volume :float = 1.0, 
+            speakerStyle :str = "ノーマル",
+            volume :float = 2.0, 
             speed :float = 1.0, 
             pitch :float = 0, 
             intonation: float = 1.0
@@ -337,12 +338,16 @@ class Clip:
 
 
     @classmethod
-    def cut_func(cls, from_sec, to_sec):
+    def cut_func(cls, from_sec, to_sec, max_duration):
         def cut(t):
             ret = t+from_sec
             if (to_sec) <= (ret):
-                return  to_sec
+                ret =  to_sec
+
+            if max_duration <= ret:
+                ret = max_duration - 0.1
             return ret
+                
         return cut
 
     @classmethod
@@ -373,10 +378,16 @@ class Clip:
         if (Clip.is_imagefile(filetype)):
             main_visual_clip = ImageClip(movie_filepath).set_start(current_duration).set_duration(1)
         else:
-            main_visual_clip = VideoFileClip(movie_filepath).set_start(current_duration).set_duration(-1)
+            movie_clip = VideoFileClip(movie_filepath)
             from_sec = options["from"]
             to_sec = options["to"]
-            main_visual_clip = main_visual_clip.fl_time(Clip.cut_func(from_sec, to_sec))
+            if options["stop"]:
+                movie_clip = movie_clip.to_ImageClip(t=from_sec).set_duration(1)
+            else:
+                max_duration = movie_clip.duration
+                movie_clip = movie_clip.fl_time(Clip.cut_func(from_sec, to_sec, max_duration)).set_duration(0)
+
+            main_visual_clip = movie_clip.set_start(current_duration)
 
         # メインビジュアルの表示位置(左端)
         x = Clip.config["movie"]["background"]["main_vision_left_top_x"]
@@ -425,8 +436,12 @@ class Clip:
         )
 
         # テロップの表示位置
+        
         x = Clip.config["movie"]["text"]["x"]
         y = Clip.config["movie"]["text"]["y"]
+        if text_clip_options["voice_option"]["is_same_timing"] and len(clips) > 0:
+            x += 10
+            y += 10
         text_position = (x, y)
 
         txtclip = txtclip.set_duration(float(audioclip.duration)).set_position(text_position).fx(moviepy.audio.fx.all.volumex, 1.2)
@@ -437,7 +452,7 @@ class Clip:
         
         start_timing = current_duration
         if text_clip_options["voice_option"]["is_same_timing"] and len(clips) > 0:
-            start_timing = clips[-1].start
+            start_timing = clips[-1].start + 0.01
 
         return txtclip.set_start(t=start_timing, change_end=True)
     
@@ -572,7 +587,7 @@ class Clip:
         print(Clip.scripts[-1])
 
     @classmethod
-    def main_visual(cls, path, from_sec=0,to_sec=-1, is_fullscreen=False,is_mute=False):
+    def main_visual(cls, path, from_sec=0,to_sec=-1, is_fullscreen=False,is_mute=False, stop=False):
         command = "main_visual"
         if is_fullscreen:
             command = "full_screen_visual"
@@ -583,7 +598,8 @@ class Clip:
                 "from": from_sec,
                 "to": to_sec,
                 "is_fullscreen": is_fullscreen,
-                "is_mute": is_mute
+                "is_mute": is_mute,
+                "stop": stop
             }
         })
 
@@ -753,7 +769,8 @@ class Clip:
         # プレビューしたい場合は設定値の指定した範囲だけを動画に書き出す
         if Clip.config["preview"]["enable"]:
             output_start_time = Clip.config["preview"]["start"]
-            output_end_time = Clip.config["preview"]["end"]
+            if Clip.config["preview"]["end"] != -1:
+                output_end_time = Clip.config["preview"]["end"]
 
         # 各種クリップを1つのクリップにまとめて
         # TODO: 動画のサイズを変更できるようにする
@@ -798,7 +815,7 @@ def v(style="四国めたん",text="",say=None,is_same_timing=False):
 
 def main():
     # めたんちゃんの設定
-    vop = VoicevoxOptions(speakerName="四国めたん", speakerStyle="ノーマル",speed=1.0)
+    vop = VoicevoxOptions(speakerName="四国めたん", speakerStyle="ノーマル",speed=1.1)
     top = TelopOptions(text_color="pink",text_size=25)
     四国めたん=CharacterVoice(vop,top)
     Clip.set_voice("四国めたん", 四国めたん)
@@ -809,6 +826,10 @@ def main():
     top = TelopOptions(text_color="#33FF33")
     ずんだもん=CharacterVoice(vop,top)
     Clip.set_voice("ずんだもん", ずんだもん)
+
+
+    しょんぼりずんだもん=CharacterVoice(VoicevoxOptions(speakerName="ずんだもん", speakerStyle="ノーマル",speed=1.2,pitch=-0.05,intonation=0.7),TelopOptions(text_color="#33FF33"))
+    Clip.set_voice("しょんぼりずんだもん", しょんぼりずんだもん)
 
     # パワポを画像に変換
     conv_pptx_to_img("./resource/slide/vol1.pptx")
@@ -830,20 +851,16 @@ def main():
     Clip.main_visual(get_slide_path(3), is_fullscreen=True)
     Clip.se("./resource/se/pon.mp3")
     v("四国めたん", "四国めたんの")
-    Clip.wait(0.5)
+    Clip.wait(0.2)
 
     # パワポ4ページ目を表示
     Clip.main_visual(get_slide_path(4), is_fullscreen=True)
     Clip.se("./resource/se/kansei.mp3")
     v("ずんだもん", f"ずんだ競馬！")
     v("四国めたん", f"ずんだ競馬！!", is_same_timing=True)
-    Clip.wait(1.5)
-
-    # # 紫苑ステークスの動画の12秒から50秒目までを表示
-    # Clip.main_visual("./resource/movie/nakayama11r.mov", 12, 50)
-    # # めたんちゃん設定(興奮気味に少し早口)
-
-
+    Clip.main_visual(get_slide_path(5), is_fullscreen=True)
+    Clip.wait(2)
+    Clip.main_visual("", is_fullscreen=True, is_mute=True)
 
     # # キャラクタの初期設定
     Clip.add_character("四国めたん", CharacterImageSettings(x=900,y=320,resize=0.3))
@@ -857,7 +874,234 @@ def main():
     # # キャラクタを初期表示
     Clip.char("四国めたん", "ノーマル")
     Clip.char("ずんだもん", "ノーマル")
+
+    Clip.bgm("./resource/bgm/マーチ.wav")
+    Clip.main_visual("./resource/movie/中山競馬場.mov",1.1, 1.1,stop=True)
+
+    Clip.se("./resource/se/pon.mp3")
+    v("ずんだもん", f"秋競馬開幕！")
+
+    v("四国めたん", f"秋競馬開幕！!")
+    Clip.wait(0.2)
+
+    Clip.se("./resource/se/kansei.mp3")
+    v("ずんだもん", f"いえーい！")
+    v("四国めたん", f"いえーい！!", is_same_timing=True)
+    Clip.wait(0.2)
+
+    v("ずんだもん", f"暑い夏と！熱い夏競馬が終わって、秋競馬が始まったのだ")
+    v("ずんだもん", f"札幌、新潟、小倉での開催も終了して、東京でも中央競馬開催が再開したのだ")
+
+    v("ずんだもん", f"(中の人が)比較的中山競馬場と、東京競馬場にはアクセスしやすいので","比較的中山競馬場と、東京競馬場にはアクセスしやすいので")
+    v("ずんだもん", f"折角なので、開幕初日の中山競馬場にやってきたのだ")
+
+    Clip.wait(0.2)
+    v("四国めたん", f"とはいっても、もう14時過ぎでレースも後半戦になってきてるわね")
+    Clip.wait(0.2)
+    v("しょんぼりずんだもん", "中の人が競馬予想AIとか作ってるんだけど")
+    v("しょんぼりずんだもん", "それの調整とかしたり、昨晩スプラトゥーン3を遅くまでやってたから","それの調整とかしたり、昨晩スプラトゥーンスリーを遅くまでやってたから")
+    v("しょんぼりずんだもん", "こんな時間になっちゃったんだよね・・・")
+    v("四国めたん", f"あぁ・・・なるほど・・・")
+    Clip.wait(0.2)
+    v("しょんぼりずんだもん", "そのうえ、いつもとルートを変えてきたから迷って・・・")
+    v("しょんぼりずんだもん", "いつもより到着に時間がかかっちゃったのだ・・・")
+    Clip.wait(0.2)
+    v("四国めたん", f"まぁ、気を取り直して早速入場してみましょう")
+    Clip.wait(0.2)
+    Clip.se("./resource/se/シーン切り替え1.mp3")
+    Clip.main_visual("./resource/movie/入場口.mov",5, 12)
+    v("ずんだもん", f"入場するとスプリンターズステークスの告知をやっていたのだ")
+    v("ずんだもん", f"できれば、見に行きたいんだけど、入場券の争奪戦がたいへんそうなのだ・・・")
+    Clip.main_visual("./resource/movie/入場口.mov",12, 12,stop=True)
+    Clip.wait(0.2)
+    Clip.se("./resource/se/シーン切り替え1.mp3")
+
+    Clip.main_visual("./resource/movie/焼きそば.mov",2, 4)
+    v("ずんだもん", f"中にはいって、とりあえずは腹ごしらえ！")
+    v("ずんだもん", f"お昼もまだだったしね")
+    Clip.wait(0.2)
+    v("四国めたん", f"あら、おいしそうな焼きそば、、、と、これはビーr",f"あら、おいしそうな焼きそば、、、と、これはビー")
+    Clip.main_visual("./resource/movie/焼きそば.mov",4, 4,stop=True)
+    v("ずんだもん", f"麦ソーダなのだ")
+    v("四国めたん", f"麦ソーダです")
+    Clip.wait(0.2)
+    v("ずんだもん", f"折角なので、KASUYAの牛すじとか食べたいな。と思っていたんだけど",f"折角なので、カスヤの牛すじとか食べたいな。と思っていたんだけど")
+    v("ずんだもん", f"お昼ちょっと過ぎだったこともあって、激込みだったのだ")
+    Clip.wait(0.2)
+    v("四国めたん", f"ちょっと落ち着いたら食べに行ってみましょうか",f"ちょっと落ち着いたら、たべに行ってみましょうか")
+    v("ずんだもん", f"そうするのだ。")
+    v("ずんだもん", f"焼きそばは安定してて、紅しょうがが若干エッジが効いた感じでおいしかったのだ")
+    v("四国めたん", f"あら、本当ね")
+    Clip.wait(0.2)
+    v("ずんだもん", f"視聴者の方々の、中山競馬場オススメの食べ物とかあったら、教えてほしいのだ")
+    Clip.wait(0.2)
+
+    Clip.se("./resource/se/pon.mp3")
+    Clip.main_visual("./resource/screen/キセキちゃん_ぬいぐるみ.png")
+    v("ずんだもん", f"ターフィーショップでキセキちゃんぬいぐるみも買って準備万端！")
+    v("四国めたん", f"何時の間に・・・・")
+    v("ずんだもん", f"早速パドックを見てから予想するのだ！")
+    Clip.wait(0.2)
+
+    Clip.se("./resource/se/シーン切り替え1.mp3")
+    Clip.main_visual("./resource/movie/9r_パドック.mov",2,37)
+    v("ずんだもん", f"じゃん！")
+    Clip.wait(0.2)
+    v("ずんだもん", f"中山9R、アスター賞のパドックなのだ",f"中山9レース、アスター賞のパドックなのだ")
+    v("四国めたん", f"開催初日だけあってか、人が一杯いるわね")
+    v("四国めたん", f"アスター賞はどんなレースなの？")
+    Clip.wait(0.2)
+    v("ずんだもん", f"芝の1600m、外回りを10頭で競い合うレースなのだ",f"芝の1600メートル、外回りを10頭で競い合うレースなのだ")
+    v("ずんだもん", f"出走できるのは、2歳で1勝しているお馬さんなのだ")
+    Clip.wait(0.2)
+    v("四国めたん", f"夏競馬で新馬戦が始まったばかりだから",f"夏競馬で、しんばせんが始まったばかりだから")
+    v("四国めたん", f"早々に1勝を上げた2歳のお馬さんたちのレースなのね")
+    Clip.wait(0.2)
+    v("ずんだもん", f"そうなのだ")
+    v("ずんだもん", f"ずんだもんが知ってる限りだと")
+    Clip.wait(0.2)
+    Clip.se("./resource/se/pon.mp3")
+    Clip.main_visual("./resource/movie/9r_パドック.mov",8,8,stop=True)
+    v("ずんだもん", f"2番のシテイタイケツちゃんは")
+    v("ずんだもん", f"大井競馬場でデビューしたんだけど、そのレースで")
+    v("ずんだもん", f"最後尾のすっごい離されたところから")
+    v("ずんだもん", f"最後の直線でぐんぐん伸びてきて")
+    v("ずんだもん", f"最終的に2着に3、4馬身差つけて勝っちゃったんだよね")
+    v("ずんだもん", f"あまりにも大差を気持ちよくまくったので")
+    v("ずんだもん", f"世界的にもそのレースの動画がバズって話題になったのだ")
+    Clip.wait(0.2)
+    v("四国めたん", f"あ、そのニュース、私も見たけど、あの勝ち方は気持ちよかったわね")
     
+    Clip.se("./resource/se/シーン切り替え1.mp3")
+    Clip.main_visual("./resource/movie/9r_パドック.mov",8,37)
+    v("四国めたん", f"それで、パドックを見て気になるお馬さんは居たの？")
+    v("ずんだもん", f"ずんだもんは、パドックでは大体、おしりの筋肉の具合と、毛の艶")
+    v("ずんだもん", f"暴れてないかな～。くらいしか見ないんだけど、")
+    v("ずんだもん", f"正直よくわからなかったのだ")
+    Clip.wait(0.2)
+    v("ずんだもん", f"いかがでしたか？この情報は参考になりましたか？")
+    Clip.wait(0.2)
+    v("四国めたん", f"なるわけないでしょ。")
+    v("ずんだもん", f"人気を参考に買っても良いんだけど、折角なので")
+    v("ずんだもん", f"(中の人が)用意してきたAIちゃんの予想を見てみるのだ。")
+    Clip.wait(0.5)
+
+    Clip.se("./resource/se/シーン切り替え1.mp3")
+    Clip.main_visual("./resource/screen/9r_yosou.png")
+    v("ずんだもん", f"AIちゃんの予想はこうなのだ")
+    v("四国めたん", f"だいたい人気通りみたいね")
+    v("ずんだもん", f"そうみたいだね")
+    Clip.wait(0.2)
+    v("ずんだもん", f"5頭上げてるうちの、5番目なのでなんともなんだけど")
+    v("ずんだもん", f"6番人気のアマイちゃんが、若干お買い得なのかな～って気持ちなのだ")
+    v("四国めたん", f"へえ")
+    Clip.wait(0.5)
+
+    Clip.se("./resource/se/pon.mp3")
+    Clip.main_visual("./resource/screen/9r_baken.jpg")
+    v("ずんだもん", f"ということで、はい、ドン！")
+    v("ずんだもん", f"上位人気の中から、見た目が好みだった、")
+    v("ずんだもん", f"4人気・10番のシルヴァーゴーストちゃん軸の馬連")
+    v("ずんだもん", f"相手は1番人気と3番人気なのだ")
+    v("四国めたん", f"2番人気の子は入れなかったのね")
+    v("ずんだもん", f"購入点数が多くなっちゃうからあきらめたのだ・・・")
+    v("ずんだもん", f"軸のシルヴァーゴーストちゃんは、逃げ予想だったので")
+    v("ずんだもん", f"開幕日の馬場も合ってるんじゃないかなと予想したのだ")
+    Clip.wait(0.2)
+
+    v("ずんだもん", f"それと、アマイちゃんの複勝なのだ")
+    v("ずんだもん", f"複勝が4倍から10倍なのでなかなかいい感じだね")
+    v("四国めたん", f"結構つくわね")
+    v("ずんだもん", f"そろそろレースが始まるので見に行ってみるのだ")
+    Clip.wait(0.2)
+
+    Clip.se("./resource/se/シーン切り替え1.mp3")
+    Clip.main_visual("./resource/screen/keiba_biyori.png")
+    v("ずんだもん", f"競馬！日和ーーーー！")
+    v("四国めたん", f"ほんと、いい天気。見事な秋晴れね。")
+    Clip.wait(0.2)
+    v("ずんだもん", f"綺麗に晴れたのだ。都内でこの開けた青空を浴びるために")
+    v("ずんだもん", f"競馬場に来てると言っても過言ではないのだ")
+    Clip.wait(0.5)
+
+    Clip.se("./resource/se/シーン切り替え1.mp3")
+    Clip.main_visual("./resource/movie/9r.mov",0,0,stop=True)
+    v("ずんだもん", f"そうこうしている間に、9レースが始まるのだ")
+    v("ずんだもん", f"9レースは、だいたい第1、第2コーナーの中間くらいからスタート")
+    v("ずんだもん", f"結構遠いのだ・・・")
+    Clip.main_visual("./resource/movie/9r.mov",0,108)
+    v("ずんだもん", f"最後にシルヴァーゴーストちゃんがゲートに入って・・・")
+    Clip.wait(5)
+    Clip.bgm("./resource/bgm/ロボットのやつ.wav")
+    Clip.wait(1)
+    v("ずんだもん", f"スタートしたのだ！")
+    Clip.wait(0.2)
+    v("ずんだもん", f"結構いい感じに揃ったスタートなのかな。と思ったんだけど")
+    v("しょんぼりずんだもん", f"ちょっと出遅れがあったらしく、隣のお兄さんがめちゃくちゃ嘆いていたのだ・・・")
+    v("四国めたん", f"かわいそう")
+    Clip.wait(0.2)
+    v("ずんだもん", f"スタートの様子は、後で各　々、JRAの公式動画とかみてみてね")
+    Clip.wait(1)
+    Clip.text( f"・・・・・","てんてんてんてんてん")
+    v("ずんだもん", f"あっ・・・・あっ・・・")
+    Clip.wait(0.2)
+    v("四国めたん", f"ずんだもん、どうしたの？")
+    Clip.wait(0.2)
+
+    v("しょんぼりずんだもん", f"お馬さんまで遠いのと、物陰にかくれちゃって")
+    v("しょんぼりずんだもん", f"カメラが早速馬群を見失ったのだ・・・",f"カメラが早速、ばぐんを見失ったのだ・・・")
+    v("四国めたん", f"ええー")
+    Clip.wait(0.2)
+
+    v("しょんぼりずんだもん", f"仕方ないから、見つかるまで、カットするのだ")
+    Clip.se("./resource/se/シーン切り替え1.mp3")
+    Clip.main_visual("./resource/movie/9r.mov",69,86)
+    v("ずんだもん", f"あっ！居たのだ！")
+    v("四国めたん", f"ってもう、最終コーナーじゃない！")
+    v("ずんだもん", f"結構縦長で、差が開いている感じなのだ")
+    v("ずんだもん", f"先頭は・・・・")
+    Clip.main_visual("./resource/movie/9r.mov",95,108)
+    v("ずんだもん", f"5番ドンデンガエシ！")
+    v("ずんだもん", f"続いて、10番シルヴァーゴースト")
+    v("ずんだもん", f"そしてその後ろが・・・・")
+    Clip.wait(1)
+    v("ずんだもん", f"ん？")
+    Clip.text( f"ん？","てんてんてんてんてん")
+    Clip.wait(1)
+
+    Clip.se("./resource/se/カメラのシャッター.mp3")
+    Clip.main_visual("./resource/movie/9r.mov",103,stop=True)
+    Clip.wait(1)
+    
+    Clip.se("./resource/se/カメラのシャッター.mp3")
+    Clip.main_visual("./resource/movie/9r.mov",103.5,stop=True)
+    Clip.wait(1)
+    
+    Clip.se("./resource/se/カメラのシャッター.mp3")
+    Clip.main_visual("./resource/movie/9r.mov",104,stop=True)
+    Clip.wait(1)
+    Clip.main_visual("./resource/movie/9r.mov",104,108)
+    v("ずんだもん", f"7番アマイちゃんなのだ！")
+    v("四国めたん", f"おおーーー！")
+    Clip.text( f"・・・・・","てんてんてんてんてん")
+    Clip.wait(0.5)
+    v("ずんだもん", f"・・・・やったか？",)
+    Clip.wait(0.2)
+    v("四国めたん", f"えっ")
+    v("ずんだもん", f"何か雲行きが怪しいのだ")
+    v("四国めたん", f"えー")
+    Clip.wait(0.2)
+    v("ずんだもん", f"ここからの画角だと分かりづらかったんだけど")
+    v("ずんだもん", f"内に居た1番のサクセスバラードちゃんと")
+    v("ずんだもん", f"ほぼ同じタイミングでゴールしたらしく、写真判定になったのだ")
+    v("四国めたん", f"えー")
+    Clip.wait(0.2)
+    v("ずんだもん", f"仕方ないからおとなしく結果がでるのをまつのd",f"仕方ないからおとなしく結果がでるのをまつの")
+    Clip.se("./resource/se/チーン.mp3")
+    Clip.main_visual("./resource/screen/9r_kakutei.png")
+    v("ずんだもん", f"後半へつづくのだ")
+    Clip.wait(3)
+    Clip.main_visual("",is_mute=True)
     # Clip.se("./resource/se/pon.mp3")
     # Clip.ch_voice("四国めたん")
     # Clip.voice(f"全画面表示をテストしてみます")
@@ -872,10 +1116,10 @@ def main():
     # Clip.se("./resource/se/pon.mp3")
     # Clip.main_visual("", is_fullscreen=True,is_mute=True)
     # Clip.voice(f"シーン切り替えやタイトル表示にも使えそうだね")
-    Clip.wait(1)
-    Clip.main_visual("", is_fullscreen=True,is_mute=True)
-    Clip.text(f"使用キャラクタ: VOICEVOX: ずんだもん/四国めたん")
-    Clip.text(f"立ち絵素材: 坂本あひる様")
+    # Clip.wait(1)
+    # Clip.main_visual("", is_fullscreen=True,is_mute=True)
+    # Clip.text(f"使用キャラクタ: VOICEVOX: ずんだもん/四国めたん")
+    # Clip.text(f"立ち絵素材: 坂本あひる様")
     Clip.create_movie()
 
 
