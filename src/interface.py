@@ -10,6 +10,8 @@ import csv
 import hashlib
 import time
 import json
+import win32com.client
+import shutil
 
 def get_voicevox_audio_query(text, voice_vox_options):
     """
@@ -393,7 +395,7 @@ class Clip:
         return main_visual_clip
 
     @classmethod
-    def create_text_clip(cls, text_clip_options, current_duration, has_audio):
+    def create_text_clip(cls,clips, text_clip_options, current_duration, has_audio):
         """
         テロップを作成する
         """
@@ -432,8 +434,12 @@ class Clip:
         # 読み上げる場合は音声を設定
         if has_audio:
             txtclip = txtclip.set_audio(audioclip)
+        
+        start_timing = current_duration
+        if text_clip_options["voice_option"]["is_same_timing"] and len(clips) > 0:
+            start_timing = clips[-1].start
 
-        return txtclip.set_start(t=current_duration, change_end=True)
+        return txtclip.set_start(t=start_timing, change_end=True)
     
     @classmethod
     def create_audio_clip(cls, audio_clip_options, current_duration, volume):
@@ -522,7 +528,7 @@ class Clip:
         Clip.current_character = Clip.characters[characterName]
 
     @classmethod
-    def voice(cls, telop :str,say :str = None) -> None:
+    def voice(cls, telop :str,say :str = None,is_same_timing=False) -> None:
         if say is None:
             say = telop
 
@@ -538,12 +544,13 @@ class Clip:
                 "speed": Clip.current_character.voicevoxOptions.speed,
                 "intonation": Clip.current_character.voicevoxOptions.intonation,
                 "speaker_id": Clip.current_character.voicevoxOptions.speaker_id,
+                "is_same_timing": is_same_timing
             }
         })
         print(Clip.scripts[-1])
 
     @classmethod
-    def text(cls, telop :str,say :str = None) -> None:
+    def text(cls, telop :str,say :str = None,is_same_timing=False) -> None:
         if say is None:
             say = telop
 
@@ -559,6 +566,7 @@ class Clip:
                 "speed": Clip.current_character.voicevoxOptions.speed,
                 "intonation": Clip.current_character.voicevoxOptions.intonation,
                 "speaker_id": Clip.current_character.voicevoxOptions.speaker_id,
+                "is_same_timing": is_same_timing
             }
         })
         print(Clip.scripts[-1])
@@ -650,12 +658,12 @@ class Clip:
                 Clip.movie["character_clips"][script["options"]["name"]].append(character_clip)
                 pass
             if command == "voice":
-                txtclip = Clip.create_text_clip(script, Clip.movie["current_duration"], True)
+                txtclip = Clip.create_text_clip(Clip.movie["text_clips"], script, Clip.movie["current_duration"], True)
                 Clip.movie["current_duration"] += txtclip.duration
                 Clip.movie["text_clips"].append(txtclip)
                 pass
             if command == "text":
-                txtclip = Clip.create_text_clip(script, Clip.movie["current_duration"], False)
+                txtclip = Clip.create_text_clip(Clip.movie["text_clips"], script, Clip.movie["current_duration"], False)
                 Clip.movie["current_duration"] += txtclip.duration
                 Clip.movie["text_clips"].append(txtclip)
                 pass
@@ -698,14 +706,6 @@ class Clip:
         output_layers.append(background_clip)
 
 
-        # 最後の動画の再生時間を動画の最後までに設定する
-        if len(Clip.movie["fullscreen_visual_clips"]) > 0:
-            last_video_duration = total_duration - Clip.movie["fullscreen_visual_clips"][-1].start
-
-            if last_video_duration > 0 and Clip.movie["fullscreen_visual_clips"][-1].duration != -1:
-                Clip.movie["fullscreen_visual_clips"][-1] = Clip.movie["fullscreen_visual_clips"][-1].set_duration(last_video_duration)
-            output_layers.extend(Clip.movie["fullscreen_visual_clips"])
-
         # テロップクリップがあれば出力レイヤに追加
         if len(Clip.movie["text_clips"]) > 0:
             output_layers.extend(Clip.movie["text_clips"])
@@ -734,6 +734,14 @@ class Clip:
                         last_character_duration
                     )
                 output_layers.extend(Clip.movie["character_clips"][character_name])
+
+        # 最後の動画の再生時間を動画の最後までに設定する
+        if len(Clip.movie["fullscreen_visual_clips"]) > 0:
+            last_video_duration = total_duration - Clip.movie["fullscreen_visual_clips"][-1].start
+
+            if last_video_duration > 0 and Clip.movie["fullscreen_visual_clips"][-1].duration != -1:
+                Clip.movie["fullscreen_visual_clips"][-1] = Clip.movie["fullscreen_visual_clips"][-1].set_duration(last_video_duration)
+            output_layers.extend(Clip.movie["fullscreen_visual_clips"])
 
 
         # 動画出力を開始する時間
@@ -767,25 +775,77 @@ class Clip:
             threads=Clip.config["numOfThread"],
             write_logfile=True,
         )
+    
+
+def get_slide_path(index):
+    return get_path(f"./resource/slide_img/スライド{index}.PNG")
+
+def conv_pptx_to_img(pptx_path):
+    from_path = get_path(pptx_path)
+    to_path = get_path("./resource/temp_slide/temp_slide.pptx")
+    shutil.copyfile(from_path, to_path)
+    application = win32com.client.DispatchEx("Powerpoint.Application")
+    application.Visible = True
+    pp = application.Presentations.open(to_path)
+    pp.Export(get_path("./resource/slide_img/"), FilterName="png")
+    pp.close()
+    # application.quit()
+
+
+def v(style="四国めたん",text="",say=None,is_same_timing=False):
+    Clip.ch_voice(style)
+    Clip.voice(text,say,is_same_timing)
 
 def main():
-    # BGMとメイン動画を設定
-    Clip.bgm("./resource/bgm/bgm01.wav")
-
-    # 紫苑ステークスの動画の12秒から50秒目までを表示
-    Clip.main_visual("./resource/movie/nakayama11r.mov", 12, 50)
-    # めたんちゃん設定(興奮気味に少し早口)
-    vop = VoicevoxOptions(speakerName="四国めたん", speakerStyle="ノーマル",speed=1.2)
+    # めたんちゃんの設定
+    vop = VoicevoxOptions(speakerName="四国めたん", speakerStyle="ノーマル",speed=1.0)
     top = TelopOptions(text_color="pink",text_size=25)
     四国めたん=CharacterVoice(vop,top)
     Clip.set_voice("四国めたん", 四国めたん)
+    Clip.set_voice("四国めたん", 四国めたん)
 
+    # ずんだもんの設定
     vop = VoicevoxOptions(speakerName="ずんだもん", speakerStyle="ノーマル",speed=1.2)
     top = TelopOptions(text_color="#33FF33")
     ずんだもん=CharacterVoice(vop,top)
     Clip.set_voice("ずんだもん", ずんだもん)
 
-    # キャラクタの初期設定
+    # パワポを画像に変換
+    conv_pptx_to_img("./resource/slide/vol1.pptx")
+
+    # # BGMとメイン動画を設定
+    Clip.se("./resource/se/イントロ.wav")    
+    
+    # パワポ1ページ目を表示
+    Clip.main_visual(get_slide_path(1), is_fullscreen=True)
+    Clip.wait(0.5)
+
+    # パワポ2ページ目を表示
+    Clip.main_visual(get_slide_path(2), is_fullscreen=True)
+    Clip.se("./resource/se/pon.mp3")
+    v("ずんだもん", "ずんだもんと")
+    Clip.wait(0.5)
+
+    # パワポ3ページ目を表示
+    Clip.main_visual(get_slide_path(3), is_fullscreen=True)
+    Clip.se("./resource/se/pon.mp3")
+    v("四国めたん", "四国めたんの")
+    Clip.wait(0.5)
+
+    # パワポ4ページ目を表示
+    Clip.main_visual(get_slide_path(4), is_fullscreen=True)
+    Clip.se("./resource/se/kansei.mp3")
+    v("ずんだもん", f"ずんだ競馬！")
+    v("四国めたん", f"ずんだ競馬！!", is_same_timing=True)
+    Clip.wait(1.5)
+
+    # # 紫苑ステークスの動画の12秒から50秒目までを表示
+    # Clip.main_visual("./resource/movie/nakayama11r.mov", 12, 50)
+    # # めたんちゃん設定(興奮気味に少し早口)
+
+
+
+    # # キャラクタの初期設定
     Clip.add_character("四国めたん", CharacterImageSettings(x=900,y=320,resize=0.3))
     Clip.add_character_style("四国めたん", CharacterImageStyle(name="ノーマル",image_path="./resource/character/四国めたん_ノーマル.png"))
     Clip.add_character_style("四国めたん", CharacterImageStyle(name="目そらし",image_path="./resource/character/四国めたん_目そらし.png"))
@@ -794,25 +854,26 @@ def main():
     Clip.add_character_style("ずんだもん", CharacterImageStyle(name="ノーマル",image_path="./resource/character/ずんだもん_ノーマル.png"))
     Clip.add_character_style("ずんだもん", CharacterImageStyle(name="ビックリ",image_path="./resource/character/ずんだもん_ビックリ.png"))
 
-    # キャラクタを初期表示
+    # # キャラクタを初期表示
     Clip.char("四国めたん", "ノーマル")
     Clip.char("ずんだもん", "ノーマル")
     
-    Clip.se("./resource/se/pon.mp3")
-    Clip.ch_voice("四国めたん")
-    Clip.voice(f"全画面表示をテストしてみます")
-    Clip.se("./resource/se/シーン切り替え1.mp3")
-    Clip.main_visual("./resource/screen/screen1.png",is_fullscreen=True)
-    Clip.wait(2)
-    Clip.ch_voice("ずんだもん")
-    Clip.voice(f"もちろん動画も表示できるのだ")
-    Clip.main_visual("./resource/movie/nakayama11r.mov", 12, 50,is_fullscreen=True)
-    Clip.wait(2)
-    Clip.voice(f"全画面表示おわり")
-    Clip.se("./resource/se/pon.mp3")
+    # Clip.se("./resource/se/pon.mp3")
+    # Clip.ch_voice("四国めたん")
+    # Clip.voice(f"全画面表示をテストしてみます")
+    # Clip.se("./resource/se/シーン切り替え1.mp3")
+    # Clip.main_visual("./resource/screen/screen1.png",is_fullscreen=True)
+    # Clip.wait(2)
+    # Clip.ch_voice("ずんだもん")
+    # Clip.voice(f"もちろん動画も表示できるのだ")
+    # Clip.main_visual("./resource/movie/nakayama11r.mov", 12, 50,is_fullscreen=True)
+    # Clip.wait(2)
+    # Clip.voice(f"全画面表示おわり")
+    # Clip.se("./resource/se/pon.mp3")
+    # Clip.main_visual("", is_fullscreen=True,is_mute=True)
+    # Clip.voice(f"シーン切り替えやタイトル表示にも使えそうだね")
+    Clip.wait(1)
     Clip.main_visual("", is_fullscreen=True,is_mute=True)
-    Clip.voice(f"シーン切り替えやタイトル表示にも使えそうだね")
-
     Clip.text(f"使用キャラクタ: VOICEVOX: ずんだもん/四国めたん")
     Clip.text(f"立ち絵素材: 坂本あひる様")
     Clip.create_movie()
