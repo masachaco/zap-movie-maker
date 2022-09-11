@@ -697,6 +697,15 @@ class Clip:
         )
         output_layers.append(background_clip)
 
+
+        # 最後の動画の再生時間を動画の最後までに設定する
+        if len(Clip.movie["fullscreen_visual_clips"]) > 0:
+            last_video_duration = total_duration - Clip.movie["fullscreen_visual_clips"][-1].start
+
+            if last_video_duration > 0 and Clip.movie["fullscreen_visual_clips"][-1].duration != -1:
+                Clip.movie["fullscreen_visual_clips"][-1] = Clip.movie["fullscreen_visual_clips"][-1].set_duration(last_video_duration)
+            output_layers.extend(Clip.movie["fullscreen_visual_clips"])
+
         # テロップクリップがあれば出力レイヤに追加
         if len(Clip.movie["text_clips"]) > 0:
             output_layers.extend(Clip.movie["text_clips"])
@@ -725,14 +734,6 @@ class Clip:
                         last_character_duration
                     )
                 output_layers.extend(Clip.movie["character_clips"][character_name])
-
-        # 最後の動画の再生時間を動画の最後までに設定する
-        if len(Clip.movie["fullscreen_visual_clips"]) > 0:
-            last_video_duration = total_duration - Clip.movie["fullscreen_visual_clips"][-1].start
-
-            if last_video_duration > 0 and Clip.movie["fullscreen_visual_clips"][-1].duration != -1:
-                Clip.movie["fullscreen_visual_clips"][-1] = Clip.movie["fullscreen_visual_clips"][-1].set_duration(last_video_duration)
-            output_layers.extend(Clip.movie["fullscreen_visual_clips"])
 
 
         # 動画出力を開始する時間
