@@ -1,3 +1,4 @@
+from unicodedata import name
 import moviepy
 from moviepy.editor import *
 import requests
@@ -241,23 +242,40 @@ class VoicevoxOptions:
             return r.json()
 
 class TelopOptions:
-    def __init__(self, textColor: str = "", textSize: int = 0):
-        self.textColor = textColor
-        self.textSize = textSize
+    def __init__(self, text_color: str = "white", text_size: int = 25):
+        self.text_color = text_color
+        self.text_size = text_size
 
-class Character:
+class CharacterVoice:
     def __init__(self, 
                 voicevoxOptions: VoicevoxOptions = VoicevoxOptions(), 
-                telopOptions: TelopOptions = TelopOptions(), 
-                image_path: str = "./resource/character/tachie-normal.png"
+                telopOptions: TelopOptions = TelopOptions(),
         ):
         self.voicevoxOptions = voicevoxOptions
         self.telopOptions = telopOptions
+
+class CharacterImageSettings:
+    def __init__(self, 
+        x=0,
+        y=0,
+        resize=1
+        ):
+        self.x = x
+        self.y = y
+        self.resize = resize
+
+class CharacterImageStyle:
+    def __init__(self, 
+                name="ノーマル",
+                image_path="./resource/character/tachie-normal.png"
+        ):
         self.image_path = image_path
+        self.name = name
 
 class Clip:
     config = None
-    characters = {"default": Character()}
+    characters = {"default": CharacterVoice()}
+    character_images = {}
     current_character = characters["default"]
     scripts = []
     movie = {
@@ -268,7 +286,7 @@ class Clip:
         "bgm_clips": [],
         "wait_clips": [],
         "bgm_clips": [],
-        "character_clips": [],
+        "character_clips": {},
     }
 
     @classmethod
@@ -355,6 +373,7 @@ class Clip:
         # ファイル名はハッシュで振っておいて簡易的にキャッシュできるようにする
         # TODO: このハッシュ生成処理が重いので修正する。
         # TODO: パラメータ変更の場合古い音声を使ってしまうので修正する。
+        telop_options = text_clip_options["telop_options"]
         say = text_clip_options["say"]
         hash = hashlib.md5(say.encode()).hexdigest()
         voice_vox_towav(say, f"{hash}.wav", text_clip_options["voice_option"])
@@ -371,9 +390,9 @@ class Clip:
             method="label",
             size=(2000, 30),
             align="West",
-            fontsize=float(Clip.config["movie"]["text"]["font_size"]),
+            fontsize=float(telop_options.text_size),
             font=font_path,
-            color="white",
+            color=telop_options.text_color,
         )
 
         # テロップの表示位置
@@ -413,26 +432,35 @@ class Clip:
 
 
     @classmethod
-    def create_character_clip(slc, clips, current_duration, movie_filepath):
+    def create_character_clip(slc, clips, current_duration, options):
         """
         立ち絵クリップを作成する
         """
+        print(options)
+        character_name = options["name"]
+        character_image = options["image_settings"]
+        character_style = options["style"]
+
+        if character_name not in clips:
+            clips[character_name] = []
+
+        char_clips = clips[character_name]
 
         # この立ち絵の前に再生している立ち絵の再生時間を、この立ち絵を再生するまでに伸ばす
-        if len(clips) > 0:
-            past_char = clips[-1]
+        if len(char_clips) > 0:
+            past_char = char_clips[-1]
             past_char_duration = current_duration - past_char.start
-            clips[-1] = past_char.set_duration(past_char_duration)
+            char_clips[-1] = past_char.set_duration(past_char_duration)
 
-        char_clip = ImageClip(movie_filepath).set_duration(1)
+        char_clip = ImageClip(character_style.image_path).set_duration(1)
 
         # 立ち絵を拡大・縮小
-        ratio = Clip.config["movie"]["character"]["resize"]
+        ratio = character_image.resize
         char_clip = moviepy.video.fx.resize.resize(char_clip, ratio, ratio)
 
         # 立ち絵の表示位置
-        x = Clip.config["movie"]["character"]["x"]
-        y = Clip.config["movie"]["character"]["y"]
+        x = character_image.x
+        y = character_image.y
         char_position = (x,y)
         char_clip = char_clip.set_start(current_duration).set_position(char_position)
 
@@ -440,13 +468,30 @@ class Clip:
 
 
     @classmethod
-    def set_character(cls, characterName :str, characterOptions: Character):
+    def set_voice(cls, characterName :str, characterOptions: CharacterVoice):
         Clip.characters[characterName] = characterOptions
 
     @classmethod
-    def chanege_character(cls, characterName :str):
+    def add_character(cls, name:str="デフォルト", characterImage: CharacterImageSettings = CharacterImageSettings()):
+        if name not in Clip.character_images:
+            Clip.character_images[name] = {
+                "image_settings": characterImage,
+                "style": {
+                    "デフォルト": CharacterImageStyle()
+                }
+            }
+
+    @classmethod
+    def add_character_style(cls,name :str="デフォルト", characterOptions: CharacterImageStyle = CharacterImageStyle()):
+        if name not in Clip.character_images:
+            Clip.add_character(name, CharacterImageSettings())
+
+        Clip.character_images[name]["style"][characterOptions.name] = characterOptions
+
+    @classmethod
+    def ch_voice(cls, characterName :str):
         if characterName not in Clip.characters:
-            Clip.characters[characterName] = Character()
+            Clip.characters[characterName] = CharacterVoice()
         Clip.current_character = Clip.characters[characterName]
 
     @classmethod
@@ -460,6 +505,7 @@ class Clip:
             "telop": telop,
             "say": say,
             "voice_engine": "voicevox",
+            "telop_options": Clip.current_character.telopOptions,
             "voice_option": {
                 "pitch": Clip.current_character.voicevoxOptions.pitch,
                 "speed": Clip.current_character.voicevoxOptions.speed,
@@ -480,6 +526,7 @@ class Clip:
             "telop": telop,
             "say": say,
             "voice_engine": "voicevox",
+            "telop_options": Clip.current_character.telopOptions,
             "voice_option": {
                 "pitch": Clip.current_character.voicevoxOptions.pitch,
                 "speed": Clip.current_character.voicevoxOptions.speed,
@@ -501,10 +548,14 @@ class Clip:
         })
 
     @classmethod
-    def char(cls, character: Character = Character()):
+    def char(cls, name :str="デフォルト", style: str="ノーマル"):
         Clip.scripts.append({
             "command": "char",
-            "image_path": character.image_path
+            "options": {
+                "name": name,
+                "style": Clip.character_images[name]["style"][style],
+                "image_settings": Clip.character_images[name]["image_settings"]
+            }
         })
         pass
 
@@ -559,8 +610,8 @@ class Clip:
                 pass
             if command == "char":
                 # TODO: ここ修正
-                character_clip = Clip.create_character_clip(Clip.movie["character_clips"], Clip.movie["current_duration"], script["image_path"])
-                Clip.movie["character_clips"].append(character_clip)
+                character_clip = Clip.create_character_clip(Clip.movie["character_clips"], Clip.movie["current_duration"], script["options"])
+                Clip.movie["character_clips"][script["options"]["name"]].append(character_clip)
                 pass
             if command == "voice":
                 txtclip = Clip.create_text_clip(script, Clip.movie["current_duration"], True)
@@ -629,15 +680,16 @@ class Clip:
             output_layers.extend(Clip.movie["wait_clips"])
 
         # 立ち絵クリップがあれば出力レイヤに追加
-        if len(Clip.movie["character_clips"]) > 0:
-            # 最後キャラクタ表示時間を動画の最後までに設定する
-            last_character_duration = total_duration - Clip.movie["character_clips"][-1].start
-            if last_character_duration > 0 :
-                Clip.movie["character_clips"][-1] = Clip.movie["character_clips"][-1].set_duration(
-                    last_character_duration
-                )
-            output_layers.extend(Clip.movie["character_clips"])
-        
+        for character_name in Clip.movie["character_clips"].keys():
+            if len(Clip.movie["character_clips"][character_name]) > 0:
+                # 最後キャラクタ表示時間を動画の最後までに設定する
+                last_character_duration = total_duration - Clip.movie["character_clips"][character_name][-1].start
+                if last_character_duration > 0 :
+                    Clip.movie["character_clips"][character_name][-1] = Clip.movie["character_clips"][character_name][-1].set_duration(
+                        last_character_duration
+                    )
+                output_layers.extend(Clip.movie["character_clips"][character_name])
+
         # 動画出力を開始する時間
         output_start_time = 0
 
@@ -672,77 +724,46 @@ class Clip:
 
 def main():
     # BGMとメイン動画を設定
-    Clip.bgm("./resource/bgm/ロボットのやつ.wav")
-    Clip.wait(1)
+    Clip.bgm("./resource/bgm/bgm01.wav")
 
     # 紫苑ステークスの動画の12秒から50秒目までを表示
     Clip.main_visual("./resource/movie/nakayama11r.mov", 12, 50)
     # めたんちゃん設定(興奮気味に少し早口)
     vop = VoicevoxOptions(speakerName="四国めたん", speakerStyle="ノーマル",speed=1.2)
-    top = TelopOptions(textColor="green")
-    四国めたん=Character(vop,top,image_path="./resource/character/tachie-normal.png")
+    top = TelopOptions(text_color="pink",text_size=25)
+    四国めたん=CharacterVoice(vop,top)
+    Clip.set_voice("四国めたん", 四国めたん)
 
-    Clip.set_character("四国めたん", 四国めたん)
-    Clip.char(character=四国めたん)
-    Clip.chanege_character("四国めたん")
-    Clip.voice(f"秋競馬開幕！")
-    
-    # いつもの話し方に戻す
-    vop = VoicevoxOptions(speakerName="四国めたん", speakerStyle="ノーマル",speed=1.0)
-    top = TelopOptions(textColor="green")
-    Clip.set_character("四国めたん", 四国めたん)
-    Clip.chanege_character("四国めたん")
+    vop = VoicevoxOptions(speakerName="ずんだもん", speakerStyle="ノーマル",speed=1.2)
+    top = TelopOptions(text_color="#33FF33")
+    ずんだもん=CharacterVoice(vop,top)
+    Clip.set_voice("ずんだもん", ずんだもん)
 
-    # 紫苑ステークスの説明
-    Clip.voice(f"ということで中山競馬場に行ってきました。")
-    Clip.voice(f"今日のメインレースは紫苑ステークス")
-    Clip.voice(f"このレースは3歳牝馬限定戦で")
-    Clip.voice(f"このレースで3着以内に入ると")
-    Clip.voice(f"秋華賞の優先出走権が得られます",f"しゅうかしょうの優先出走権が得られます")
-    Clip.wait(0.3)
+    # キャラクタの初期設定
+    Clip.add_character("四国めたん", CharacterImageSettings(x=900,y=320,resize=0.3))
+    Clip.add_character_style("四国めたん", CharacterImageStyle(name="ノーマル",image_path="./resource/character/四国めたん_ノーマル.png"))
+    Clip.add_character_style("四国めたん", CharacterImageStyle(name="目そらし",image_path="./resource/character/四国めたん_目そらし.png"))
 
-    Clip.voice(f"流石開幕初日。芝が綺麗ですね！")
-    Clip.voice(f"そして目の前で走るお馬さんはやっぱり迫力があります。")
-    Clip.wait(1)
+    Clip.add_character("ずんだもん", CharacterImageSettings(x=1000,y=320,resize=0.3))
+    Clip.add_character_style("ずんだもん", CharacterImageStyle(name="ノーマル",image_path="./resource/character/ずんだもん_ノーマル.png"))
+    Clip.add_character_style("ずんだもん", CharacterImageStyle(name="ビックリ",image_path="./resource/character/ずんだもん_ビックリ.png"))
 
-    # めたんちゃん設定(興奮気味に少し早口)
-    vop = VoicevoxOptions(speakerName="四国めたん", speakerStyle="ノーマル",speed=1.2,pitch=0.1)
-    top = TelopOptions(textColor="green")
-    Clip.set_character("四国めたん", 四国めたん)
-    Clip.chanege_character("四国めたん")
-    Clip.voice(f"いけー！がんばれ！")
-    Clip.wait(1)
+    # キャラクタを初期表示
+    Clip.char("四国めたん", "ノーマル")
+    Clip.char("ずんだもん", "ノーマル")
+    Clip.ch_voice("四国めたん")
+    Clip.voice(f"テキストを色分けできるようにしました")
 
-    # めたんちゃん設定(元に戻す)
-    vop = VoicevoxOptions(speakerName="四国めたん", speakerStyle="ノーマル",speed=1.0)
-    top = TelopOptions(textColor="green")
-    Clip.set_character("四国めたん", 四国めたん)
-    Clip.chanege_character("四国めたん")
-    Clip.voice(f"オークスに出走していたお馬さんや")
-    Clip.voice(f"着実に力を付けてきたお馬さんたちがしのぎを削るレースなので")
-    Clip.voice(f"たくさんのファンが観戦に来ていました")
-    Clip.wait(0.5)
-    # 62秒～
-    Clip.main_visual("./resource/movie/nakayama11r.mov", 56, 72)
-    Clip.voice(f"まぁ、これはカット編集のお試しなので")
-    Clip.voice(f"私が遠くのお馬さんを見失った辺りをカットするんですけど・・・・・")
-    Clip.wait(10)
+    Clip.ch_voice("ずんだもん")
+    Clip.voice(f"テキストを色分けできるようにしたのだ")
 
-    Clip.main_visual("./resource/movie/nakayama11r.mov", 116, 148)
-    Clip.voice(f"はい！第三コーナーから、第四コーナーのデッドヒートです！")
-    Clip.voice(f"一段となって激しい攻防が繰り広げられています")
-    Clip.wait(0.5)
-
-    # めたんちゃん設定(興奮気味に少し早口)
-    vop = VoicevoxOptions(speakerName="四国めたん", speakerStyle="ノーマル",speed=1.1,pitch=0.1)
-    top = TelopOptions(textColor="green")
-    Clip.set_character("四国めたん", 四国めたん)
-    Clip.chanege_character("四国めたん")
-    Clip.wait(10)
-    Clip.voice(f"うおおおおおおおおおおおおおおおおおおお！")
-    Clip.voice(f"スタニングローズちゃんと！")
-    Clip.voice(f"サウンドビバーチェちゃんの激しいデッドヒート！")
-    Clip.voice(f"中山の直線はみじか")
+    vop = VoicevoxOptions(speakerName="ずんだもん", speakerStyle="ノーマル",speed=1.2)
+    top = TelopOptions(text_color="white")
+    ナレーション=CharacterVoice(vop,top)
+    Clip.set_voice("ナレーション", ナレーション)
+    Clip.ch_voice("ナレーション")
+    Clip.text(f"使用キャラクタ： VOICEVOX: ずんだもん / 四国めたん")
+    Clip.text(f"立ち絵素材: 坂本あひる様")
 
     Clip.create_movie()
 
