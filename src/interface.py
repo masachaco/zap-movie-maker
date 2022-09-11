@@ -295,9 +295,17 @@ class Clip:
         width_ratio = bg_width / width
         return width_ratio if width_ratio > height_ratio else height_ratio
 
+    @classmethod
+    def cut_func(cls, from_sec, to_sec):
+        def cut(t):
+            ret = t+from_sec
+            if (to_sec) <= (ret):
+                return  to_sec
+            return ret
+        return cut
 
     @classmethod
-    def create_main_visual_clip(cls, clips, current_duration, movie_filepath):
+    def create_main_visual_clip(cls, clips, current_duration, movie_filepath, options):
         """
             メインビジュアルにに使用するクリップを作成する
         """
@@ -305,17 +313,28 @@ class Clip:
         # この動画の前に再生している動画の再生時間を、この動画を再生するまでに伸ばす
         if len(clips) > 0:
             past_movie = clips[-1]
-            past_movie_duration = current_duration - past_movie.start
-            clips[-1] = past_movie.set_duration(past_movie_duration)
+            if past_movie.duration != -1:
+                past_movie_duration = current_duration - past_movie.start
+                clips[-1] = past_movie.set_duration(past_movie_duration)
 
         filetype = movie_filepath.split(".")[-1].lower()
 
         main_visual_clip = None
         if (Clip.is_imagefile(filetype)):
-            main_visual_clip = ImageClip(movie_filepath).set_start(current_duration).set_duration(1)
+            main_visual_clip = ImageClip(movie_filepath).set_start(current_duration).set_duration(-1)
         else:
-            main_visual_clip = VideoFileClip(movie_filepath).set_start(current_duration).set_duration(1)
+            main_visual_clip = VideoFileClip(movie_filepath).set_start(current_duration).set_duration(-1)
         
+        from_sec = options["from"]
+        to_sec = options["to"]
+        # main_visual_clip = main_visual_clip.cutout(0,from_sec)
+        # main_visual_clip = main_visual_clip.cutout(0,to_sec - from_sec)
+
+        main_visual_clip = main_visual_clip.fl_time(Clip.cut_func(from_sec, to_sec))
+        # if to_sec >= 0:
+        #     main_visual_clip = main_visual_clip.set_duration(to_sec - from_sec)
+
+
         # メインビジュアルの表示位置(左端)
         x = Clip.config["movie"]["background"]["main_vision_left_top_x"]
         y = Clip.config["movie"]["background"]["main_vision_left_top_y"]
@@ -471,10 +490,14 @@ class Clip:
         print(Clip.scripts[-1])
 
     @classmethod
-    def main_visual(cls, path):
+    def main_visual(cls, path, from_sec=0,to_sec=-1):
         Clip.scripts.append({
             "command": "main_visual",
             "filepath": path,
+            "options": {
+                "from": from_sec,
+                "to": to_sec
+            }
         })
 
     @classmethod
@@ -531,7 +554,7 @@ class Clip:
             command = script["command"]
             print("command:", command)
             if command == "main_visual":
-                main_visual_clip = Clip.create_main_visual_clip(Clip.movie["main_visual_clips"], Clip.movie["current_duration"], script["filepath"])
+                main_visual_clip = Clip.create_main_visual_clip(Clip.movie["main_visual_clips"], Clip.movie["current_duration"], script["filepath"], script["options"])
                 Clip.movie["main_visual_clips"].append(main_visual_clip)
                 pass
             if command == "char":
@@ -574,7 +597,8 @@ class Clip:
         # 最後の動画の再生時間を動画の最後までに設定する
         if len(Clip.movie["main_visual_clips"]) > 0:
             last_video_duration = total_duration - Clip.movie["main_visual_clips"][-1].start
-            if last_video_duration > 0:
+
+            if last_video_duration > 0 and Clip.movie["main_visual_clips"][-1].duration != -1:
                 Clip.movie["main_visual_clips"][-1] = Clip.movie["main_visual_clips"][-1].set_duration(last_video_duration)
             output_layers.extend(Clip.movie["main_visual_clips"])
 
@@ -608,7 +632,7 @@ class Clip:
         if len(Clip.movie["character_clips"]) > 0:
             # 最後キャラクタ表示時間を動画の最後までに設定する
             last_character_duration = total_duration - Clip.movie["character_clips"][-1].start
-            if last_character_duration > 0:
+            if last_character_duration > 0 :
                 Clip.movie["character_clips"][-1] = Clip.movie["character_clips"][-1].set_duration(
                     last_character_duration
                 )
@@ -648,23 +672,81 @@ class Clip:
 
 def main():
     # BGMとメイン動画を設定
-    Clip.bgm("./resource/bgm/bgm01.wav")
-    Clip.main_visual("./resource/movie/sample_movie.mp4")
+    Clip.bgm("./resource/bgm/ロボットのやつ.wav")
+    Clip.wait(1)
 
-    # ずんだもん設定
-    vop = VoicevoxOptions(speakerName="ずんだもん", speakerStyle="ノーマル")
+    # 紫苑ステークスの動画の12秒から50秒目までを表示
+    Clip.main_visual("./resource/movie/nakayama11r.mov", 12, 50)
+    # めたんちゃん設定(興奮気味に少し早口)
+    vop = VoicevoxOptions(speakerName="四国めたん", speakerStyle="ノーマル",speed=1.2)
     top = TelopOptions(textColor="green")
-    Clip.set_character("ずんだもん", Character(vop,top))
-    Clip.chanege_character("ずんだもん")
+    四国めたん=Character(vop,top,image_path="./resource/character/tachie-normal.png")
 
-    for i in range(3):
-        Clip.voice(f"{i}個めのセリフ")
-        Clip.wait(0.5)
+    Clip.set_character("四国めたん", 四国めたん)
+    Clip.char(character=四国めたん)
+    Clip.chanege_character("四国めたん")
+    Clip.voice(f"秋競馬開幕！")
     
-    Clip.voice("こんな感じでコードを組み込んで文章の生成もできるのだ")
+    # いつもの話し方に戻す
+    vop = VoicevoxOptions(speakerName="四国めたん", speakerStyle="ノーマル",speed=1.0)
+    top = TelopOptions(textColor="green")
+    Clip.set_character("四国めたん", 四国めたん)
+    Clip.chanege_character("四国めたん")
+
+    # 紫苑ステークスの説明
+    Clip.voice(f"ということで中山競馬場に行ってきました。")
+    Clip.voice(f"今日のメインレースは紫苑ステークス")
+    Clip.voice(f"このレースは3歳牝馬限定戦で")
+    Clip.voice(f"このレースで3着以内に入ると")
+    Clip.voice(f"秋華賞の優先出走権が得られます",f"しゅうかしょうの優先出走権が得られます")
+    Clip.wait(0.3)
+
+    Clip.voice(f"流石開幕初日。芝が綺麗ですね！")
+    Clip.voice(f"そして目の前で走るお馬さんはやっぱり迫力があります。")
+    Clip.wait(1)
+
+    # めたんちゃん設定(興奮気味に少し早口)
+    vop = VoicevoxOptions(speakerName="四国めたん", speakerStyle="ノーマル",speed=1.2,pitch=0.1)
+    top = TelopOptions(textColor="green")
+    Clip.set_character("四国めたん", 四国めたん)
+    Clip.chanege_character("四国めたん")
+    Clip.voice(f"いけー！がんばれ！")
+    Clip.wait(1)
+
+    # めたんちゃん設定(元に戻す)
+    vop = VoicevoxOptions(speakerName="四国めたん", speakerStyle="ノーマル",speed=1.0)
+    top = TelopOptions(textColor="green")
+    Clip.set_character("四国めたん", 四国めたん)
+    Clip.chanege_character("四国めたん")
+    Clip.voice(f"オークスに出走していたお馬さんや")
+    Clip.voice(f"着実に力を付けてきたお馬さんたちがしのぎを削るレースなので")
+    Clip.voice(f"たくさんのファンが観戦に来ていました")
+    Clip.wait(0.5)
+    # 62秒～
+    Clip.main_visual("./resource/movie/nakayama11r.mov", 56, 72)
+    Clip.voice(f"まぁ、これはカット編集のお試しなので")
+    Clip.voice(f"私が遠くのお馬さんを見失った辺りをカットするんですけど・・・・・")
+    Clip.wait(10)
+
+    Clip.main_visual("./resource/movie/nakayama11r.mov", 116, 148)
+    Clip.voice(f"はい！第三コーナーから、第四コーナーのデッドヒートです！")
+    Clip.voice(f"一段となって激しい攻防が繰り広げられています")
+    Clip.wait(0.5)
+
+    # めたんちゃん設定(興奮気味に少し早口)
+    vop = VoicevoxOptions(speakerName="四国めたん", speakerStyle="ノーマル",speed=1.1,pitch=0.1)
+    top = TelopOptions(textColor="green")
+    Clip.set_character("四国めたん", 四国めたん)
+    Clip.chanege_character("四国めたん")
+    Clip.wait(10)
+    Clip.voice(f"うおおおおおおおおおおおおおおおおおおお！")
+    Clip.voice(f"スタニングローズちゃんと！")
+    Clip.voice(f"サウンドビバーチェちゃんの激しいデッドヒート！")
+    Clip.voice(f"中山の直線はみじか")
 
     Clip.create_movie()
 
 
 if __name__ == "__main__":
     main()
+
