@@ -1,3 +1,5 @@
+from inspect import isfunction
+from operator import is_
 from unicodedata import name
 import moviepy
 from moviepy.editor import *
@@ -281,6 +283,7 @@ class Clip:
     movie = {
         "current_duration": 0,
         "main_visual_clips": [],
+        "fullscreen_visual_clips":[],
         "text_clips": [],
         "se_clips": [],
         "bgm_clips": [],
@@ -314,6 +317,24 @@ class Clip:
         return width_ratio if width_ratio > height_ratio else height_ratio
 
     @classmethod
+    def main_visual_fullscreen_resize_ratio(cls, width, height):
+        """
+            メインビジュアルに表示する動画の拡大・縮小率を取得する
+        """
+
+        top_x = 0
+        top_y = 0
+        bottom_x =1280
+        bottom_y = 720
+
+        bg_width = bottom_x - top_x
+        bg_height = bottom_y - top_y
+        height_ratio = bg_height / height
+        width_ratio = bg_width / width
+        return width_ratio if width_ratio > height_ratio else height_ratio
+
+
+    @classmethod
     def cut_func(cls, from_sec, to_sec):
         def cut(t):
             ret = t+from_sec
@@ -327,7 +348,6 @@ class Clip:
         """
             メインビジュアルにに使用するクリップを作成する
         """
-
         # この動画の前に再生している動画の再生時間を、この動画を再生するまでに伸ばす
         if len(clips) > 0:
             past_movie = clips[-1]
@@ -336,31 +356,38 @@ class Clip:
                 clips[-1] = past_movie.set_duration(past_movie_duration)
 
         filetype = movie_filepath.split(".")[-1].lower()
+        
+        if options["is_mute"]:
+            mute_clip = TextClip(
+                        " ",
+                        size=(1, 1),
+                        align="West",
+                        fontsize=30,
+                        color="white",
+                )
+            return mute_clip.set_duration(-1)
 
         main_visual_clip = None
         if (Clip.is_imagefile(filetype)):
-            main_visual_clip = ImageClip(movie_filepath).set_start(current_duration).set_duration(-1)
+            main_visual_clip = ImageClip(movie_filepath).set_start(current_duration).set_duration(1)
         else:
             main_visual_clip = VideoFileClip(movie_filepath).set_start(current_duration).set_duration(-1)
-        
-        from_sec = options["from"]
-        to_sec = options["to"]
-        # main_visual_clip = main_visual_clip.cutout(0,from_sec)
-        # main_visual_clip = main_visual_clip.cutout(0,to_sec - from_sec)
-
-        main_visual_clip = main_visual_clip.fl_time(Clip.cut_func(from_sec, to_sec))
-        # if to_sec >= 0:
-        #     main_visual_clip = main_visual_clip.set_duration(to_sec - from_sec)
-
+            from_sec = options["from"]
+            to_sec = options["to"]
+            main_visual_clip = main_visual_clip.fl_time(Clip.cut_func(from_sec, to_sec))
 
         # メインビジュアルの表示位置(左端)
         x = Clip.config["movie"]["background"]["main_vision_left_top_x"]
         y = Clip.config["movie"]["background"]["main_vision_left_top_y"]
         main_visual_potision = (x, y)
-        main_visual_clip = main_visual_clip.set_position(main_visual_potision)
-
         # 動画サイズを自動調整する
         ratio = Clip.main_visual_resize_ratio(main_visual_clip.w, main_visual_clip.h)
+        # フルスクリーン表示の場合
+        if options["is_fullscreen"]:
+            main_visual_potision = (0,0)
+            ratio = Clip.main_visual_fullscreen_resize_ratio(main_visual_clip.w, main_visual_clip.h)
+        
+        main_visual_clip = main_visual_clip.set_position(main_visual_potision)
         main_visual_clip = moviepy.video.fx.resize.resize(main_visual_clip, ratio, ratio)
         main_visual_clip = main_visual_clip.fx(moviepy.audio.fx.all.volumex, 0)
         return main_visual_clip
@@ -400,7 +427,7 @@ class Clip:
         y = Clip.config["movie"]["text"]["y"]
         text_position = (x, y)
 
-        txtclip = txtclip.set_duration(float(audioclip.duration)).set_position(text_position)
+        txtclip = txtclip.set_duration(float(audioclip.duration)).set_position(text_position).fx(moviepy.audio.fx.all.volumex, 1.2)
 
         # 読み上げる場合は音声を設定
         if has_audio:
@@ -537,13 +564,18 @@ class Clip:
         print(Clip.scripts[-1])
 
     @classmethod
-    def main_visual(cls, path, from_sec=0,to_sec=-1):
+    def main_visual(cls, path, from_sec=0,to_sec=-1, is_fullscreen=False,is_mute=False):
+        command = "main_visual"
+        if is_fullscreen:
+            command = "full_screen_visual"
         Clip.scripts.append({
-            "command": "main_visual",
+            "command": command,
             "filepath": path,
             "options": {
                 "from": from_sec,
-                "to": to_sec
+                "to": to_sec,
+                "is_fullscreen": is_fullscreen,
+                "is_mute": is_mute
             }
         })
 
@@ -604,6 +636,10 @@ class Clip:
         for script in Clip.scripts:
             command = script["command"]
             print("command:", command)
+            if command == "full_screen_visual":
+                fullscreen_visual_clip = Clip.create_main_visual_clip(Clip.movie["fullscreen_visual_clips"], Clip.movie["current_duration"], script["filepath"], script["options"])
+                Clip.movie["fullscreen_visual_clips"].append(fullscreen_visual_clip)
+                pass
             if command == "main_visual":
                 main_visual_clip = Clip.create_main_visual_clip(Clip.movie["main_visual_clips"], Clip.movie["current_duration"], script["filepath"], script["options"])
                 Clip.movie["main_visual_clips"].append(main_visual_clip)
@@ -690,6 +726,15 @@ class Clip:
                     )
                 output_layers.extend(Clip.movie["character_clips"][character_name])
 
+        # 最後の動画の再生時間を動画の最後までに設定する
+        if len(Clip.movie["fullscreen_visual_clips"]) > 0:
+            last_video_duration = total_duration - Clip.movie["fullscreen_visual_clips"][-1].start
+
+            if last_video_duration > 0 and Clip.movie["fullscreen_visual_clips"][-1].duration != -1:
+                Clip.movie["fullscreen_visual_clips"][-1] = Clip.movie["fullscreen_visual_clips"][-1].set_duration(last_video_duration)
+            output_layers.extend(Clip.movie["fullscreen_visual_clips"])
+
+
         # 動画出力を開始する時間
         output_start_time = 0
 
@@ -751,20 +796,24 @@ def main():
     # キャラクタを初期表示
     Clip.char("四国めたん", "ノーマル")
     Clip.char("ずんだもん", "ノーマル")
+    
+    Clip.se("./resource/se/pon.mp3")
     Clip.ch_voice("四国めたん")
-    Clip.voice(f"テキストを色分けできるようにしました")
-
+    Clip.voice(f"全画面表示をテストしてみます")
+    Clip.se("./resource/se/シーン切り替え1.mp3")
+    Clip.main_visual("./resource/screen/screen1.png",is_fullscreen=True)
+    Clip.wait(2)
     Clip.ch_voice("ずんだもん")
-    Clip.voice(f"テキストを色分けできるようにしたのだ")
+    Clip.voice(f"もちろん動画も表示できるのだ")
+    Clip.main_visual("./resource/movie/nakayama11r.mov", 12, 50,is_fullscreen=True)
+    Clip.wait(2)
+    Clip.voice(f"全画面表示おわり")
+    Clip.se("./resource/se/pon.mp3")
+    Clip.main_visual("", is_fullscreen=True,is_mute=True)
+    Clip.voice(f"シーン切り替えやタイトル表示にも使えそうだね")
 
-    vop = VoicevoxOptions(speakerName="ずんだもん", speakerStyle="ノーマル",speed=1.2)
-    top = TelopOptions(text_color="white")
-    ナレーション=CharacterVoice(vop,top)
-    Clip.set_voice("ナレーション", ナレーション)
-    Clip.ch_voice("ナレーション")
-    Clip.text(f"使用キャラクタ： VOICEVOX: ずんだもん / 四国めたん")
+    Clip.text(f"使用キャラクタ: VOICEVOX: ずんだもん/四国めたん")
     Clip.text(f"立ち絵素材: 坂本あひる様")
-
     Clip.create_movie()
 
 
