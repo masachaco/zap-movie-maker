@@ -159,7 +159,7 @@ def lunch(clip:Clip):
 
     clip.char("四国めたん", "あっ")
     clip.v("四国めたん", f"麦ソーダ")
-
+    clip.set_mark("prev_start")
     clip.wait(0.2)
     clip.char("ずんだもん", "目とじ考え")
     clip.char("四国めたん", "ノーマル")
@@ -177,6 +177,7 @@ def lunch(clip:Clip):
 
     clip.char("ずんだもん", "目とじ考え")
     clip.v("ずんだもん", f"焼きそばは安定してて、紅しょうがが若干エッジが効いた感じでおいしかったのだ")
+    clip.bgm("./resource/bgm/こたつむり.wav")
     clip.v("四国めたん", f"あら、本当ね")
     clip.wait(0.2)
     clip.char("ずんだもん", "両手挙げ")
@@ -190,6 +191,7 @@ def lunch(clip:Clip):
     clip.char("四国めたん", "あっ")
     clip.v("四国めたん", f"何時の間に・・・・")
     clip.v("ずんだもん", f"早速パドックを見てから予想するのだ！")
+    clip.set_mark("prev_end")
     clip.wait(0.2)
 
 def padock(clip:Clip):
@@ -437,15 +439,15 @@ def main():
     # パワポを画像に変換
     conv_pptx_to_img("./resource/slide/vol1.pptx")
     setup(clip)
-    # intoroduction(clip)
-    # entry(clip)
-    # lunch(clip)
+    intoroduction(clip)
+    entry(clip)
+    lunch(clip)
     # padock(clip)
     # yosou(clip)
-    race(clip)
-    # ending(clip)
+    # race(clip)
+    # ending(cli^p)
     # clip.show(10)
-    clip.preview(range_by_mark=("preview_start","preview_end"))
+    clip.preview(range_by_mark=("prev_start","prev_end"))
     # clip.create_movie(fps=1,range_by_mark=("preview_start","preview_end"))
 
 if __name__ == "__main__":

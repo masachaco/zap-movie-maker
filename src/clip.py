@@ -634,7 +634,7 @@ class Clip:
                         offset = (current_bgm_end_time - play_end_time)
                         # 超えた分、再生時間を短くして、再生リストに追加。次のBGMの設定へ
                         next_bgm = next_bgm.set_duration(next_bgm.duration - offset)
-                        new_bgm_clips.append(next_bgm.set_audio(next_bgm.audio.fx(afx.audio_fadeout, 0.2)))
+                        new_bgm_clips.append(next_bgm.set_audio(next_bgm.audio.fx(afx.audio_fadeout, 1)))
                         break
                     # ループさせるBGMが、終了するべき時間を超えてなければもう一度同じBGMを鳴らす
 
