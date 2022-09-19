@@ -450,6 +450,18 @@ class Clip:
         if text_clip_options["voice_option"]["is_same_timing"] and len(clips) > 0:
             start_timing = clips[-1].start + 0.01
 
+        # 発声タイミングを絶対時間で指定
+        if text_clip_options["voice_option"]["absolute_time"] is not None:
+            start_timing = text_clip_options["voice_option"]["absolute_time"]
+        
+        # 発声タイミングを遅らせる・食い気味
+        if text_clip_options["voice_option"]["timing_offset"] is not None:
+            start_timing = start_timing + text_clip_options["voice_option"]["timing_offset"]
+        
+        # 0より前なら0に寄せる
+        # if (start_timing < 0):
+        #     start_timing = 0
+
         return txtclip.set_start(t=start_timing, change_end=True)
     
     @classmethod
@@ -539,7 +551,7 @@ class Clip:
         Clip.current_character = Clip.characters[characterName]
 
     @classmethod
-    def voice(cls, telop :str,say :str = None,is_same_timing=False) -> None:
+    def voice(cls, telop :str,say :str = None,is_same_timing=False,absolute_time=None,timing_offset=None) -> None:
         if say is None:
             say = telop
 
@@ -555,13 +567,15 @@ class Clip:
                 "speed": Clip.current_character.voicevoxOptions.speed,
                 "intonation": Clip.current_character.voicevoxOptions.intonation,
                 "speaker_id": Clip.current_character.voicevoxOptions.speaker_id,
-                "is_same_timing": is_same_timing
+                "is_same_timing": is_same_timing,
+                "absolute_time":absolute_time,
+                "timing_offset": timing_offset
             }
         })
         print(Clip.scripts[-1])
 
     @classmethod
-    def text(cls, telop :str,say :str = None,is_same_timing=False) -> None:
+    def text(cls, telop :str,say :str = None,is_same_timing=False,absolute_time=None,timing_offset=None) -> None:
         if say is None:
             say = telop
 
@@ -577,7 +591,9 @@ class Clip:
                 "speed": Clip.current_character.voicevoxOptions.speed,
                 "intonation": Clip.current_character.voicevoxOptions.intonation,
                 "speaker_id": Clip.current_character.voicevoxOptions.speaker_id,
-                "is_same_timing": is_same_timing
+                "is_same_timing": is_same_timing,
+                "absolute_time":absolute_time,
+                "timing_offset": timing_offset
             }
         })
         print(Clip.scripts[-1])
@@ -826,9 +842,9 @@ def conv_pptx_to_img(pptx_path):
     # application.quit()
 
 
-def v(style="四国めたん",text="",say=None,is_same_timing=False):
+def v(style="四国めたん",text="",say=None,is_same_timing=False,absolute_time=None,timing_offset=None):
     Clip.ch_voice(style)
-    Clip.voice(text,say,is_same_timing)
+    Clip.voice(text,say,is_same_timing,absolute_time,timing_offset)
 
 def main():
     
@@ -838,7 +854,7 @@ def main():
     四国めたん=CharacterVoice(vop,top)
     Clip.set_voice("四国めたん", 四国めたん)
     Clip.set_voice("四国めたん", 四国めたん)
-
+    Clip.back_ground("./resource/bg/keiba_bg.png")
     # ずんだもんの設定
     vop = VoicevoxOptions(speakerName="ずんだもん", speakerStyle="ノーマル",speed=1.2)
     top = TelopOptions(text_color="#33FF33")
@@ -883,6 +899,9 @@ def main():
     v("ずんだもん", f"秋競馬開幕！")
 
     v("四国めたん", f"秋競馬開幕！!")
+    v("ずんだもん", f"秋競馬開ま",f"秋競馬かいま")
+    v("四国めたん", f"もうええわ",timing_offset=-0.5)
+    v("四国めたん", f"テスト",absolute_time=0)
     Clip.bgm("./resource/bgm/ロボットのやつ.wav")
     # Clip.bgm("./resource/bgm/ロボットのやつ.wav")
 
