@@ -845,6 +845,7 @@ class Clip:
             threads=Clip.config["numOfThread"],
             write_logfile=True,
         )
+        exit(0)
 
     @classmethod
     def preview(cls,audio_samp_rate=11000,preview_fps=5,preview_resize=1,preview_range=None, preview_range_by_mark=None,skip_audio_render=False):
@@ -1016,12 +1017,12 @@ def main():
     Clip.wait(1)
     Clip.se("./resource/se/シーン切り替え1.mp3")
 
+    Clip.set_mark("preview_start")
     Clip.main_visual("./resource/movie/焼きそば.mov",2, 4)
     Clip.char("ずんだもん", f"イエー")
     v("ずんだもん", f"中にはいって、とりあえずは腹ごしらえ！")
     v("ずんだもん", f"お昼もまだだったしね")
     Clip.wait(0.2)
-    Clip.set_mark("preview_start")
 
     Clip.char("四国めたん", "ペロ")
     v("四国めたん", f"あら、おいしそうな焼きそば、、、と、これはビーr",f"あら、おいしそうな焼きそば、、、と、これはビー")

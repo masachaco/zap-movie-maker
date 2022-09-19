@@ -1,15 +1,7 @@
-# プレビューモード
-preview: 
-  enable: false
-  # プレビューとして　切り出しを開始する時間
-  start: 260
-  # プレビューとして　切り出しを終了する時間
-  # end: 371
-  end: 371
 # NVIDIAのGPUが搭載されていれば対応したエンコーダを使うと出力が速くなります
 hasNvidiaGpu: false
 # 並列実行させる数。(だいたいの場合CPUのコア数を指定)
-numOfThread: null
+numOfThread: 4
 # 動画設定
 movie:
   additional_time: 0
