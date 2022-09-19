@@ -4,3 +4,4 @@ python-pptx==0.6.21
 pywin32==304
 imageio[pyav]== 2.21.2
 psd-tools==1.9.22
+pygame==2.1.2
