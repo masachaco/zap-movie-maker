@@ -1,6 +1,6 @@
 # プレビューモード
 preview: 
-  enable: true
+  enable: false
   # プレビューとして　切り出しを開始する時間
   start: 260
   # プレビューとして　切り出しを終了する時間
