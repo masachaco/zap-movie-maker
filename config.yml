@@ -1,12 +1,10 @@
 # NVIDIAのGPUが搭載されていれば対応したエンコーダを使うと出力が速くなります
 hasNvidiaGpu: false
 # 並列実行させる数。(だいたいの場合CPUのコア数を指定)
-numOfThread: 4
+numOfThread: null
 # 動画設定
 movie:
   additional_time: 0
-  # 出力ファイル名(拡張子は自動で付与されます)
-  output_filename: vol1_4
 
   # 背景画像の設定
   background:

@@ -575,11 +575,11 @@ class Clip:
 
         # 各種クリップを1つのクリップにまとめて
         # TODO: 動画のサイズを変更できるようにする
-        final = CompositeVideoClip(output_layers, size=(1280, 720))
+        composit = CompositeVideoClip(output_layers, size=(1280, 720))
 
         # 指定した範囲の動画を書き出す
-        final = final.subclip(output_start_time, output_end_time)
-        return final
+        composit = composit.subclip(output_start_time, output_end_time)
+        return composit
     
     def set_bgm_repeat(self, bgm_clips, total_duration):
         bgm_clips
@@ -638,35 +638,42 @@ class Clip:
 
         return new_bgm_clips
 
-    def create_movie(self):
-        final = self.composit_movie()
+    def create_movie(self,output_filename="movie.mp4",fps=24,range=None, range_by_mark=None):
+        composit = self.composit_movie()
+        if range is not None:
+            composit = composit.subclip(range[0], range[1])
+        if range_by_mark is not None:
+            start = self.mark[range_by_mark[0]]
+            end = self.mark[range_by_mark[1]]
+            composit = composit.subclip(start, end)
+        
         # 動画を出力する
-        final.write_videofile(
-            get_path(f'./output/{self.config["movie"]["output_filename"]}.mp4'),
+        composit.write_videofile(
+            get_path(f"./output/{output_filename}"),
             # NVIDIAのGPUが使えたらその設定を使う
             codec="h264_nvenc" if self.config["hasNvidiaGpu"] else "libx264",
             preset= "fast" if self.config["hasNvidiaGpu"] else "ultrafast",
             audio_codec="aac",
             temp_audiofile="temp-audio.m4a",
             remove_temp=True,
-            fps=24,
+            fps=fps,
             threads=self.config["numOfThread"],
             write_logfile=True,
         )
         exit(0)
 
-    def preview(self,audio_samp_rate=11000,preview_fps=5,preview_resize=1,preview_range=None, preview_range_by_mark=None,skip_audio_render=False):
-        final = self.composit_movie(skip_audio_render=skip_audio_render)
-        if preview_range is not None:
-            final = final.subclip(preview_range[0], preview_range[1])
-        if preview_range_by_mark is not None:
-            start = self.mark[preview_range_by_mark[0]]
-            end = self.mark[preview_range_by_mark[1]]
-            final = final.subclip(start, end)
+    def preview(self,audio_samp_rate=11000,preview_fps=2,preview_resize=1,range=None, range_by_mark=None,skip_audio_render=False):
+        composit = self.composit_movie(skip_audio_render=skip_audio_render)
+        if range is not None:
+            composit = composit.subclip(range[0], range[1])
+        if range_by_mark is not None:
+            start = self.mark[range_by_mark[0]]
+            end = self.mark[range_by_mark[1]]
+            composit = composit.subclip(start, end)
 
-        aud = final.audio.set_fps(audio_samp_rate)
-        final = final.without_audio().set_audio(aud)
-        final.resize(width=720*preview_resize).preview(fps=preview_fps)
+        aud = composit.audio.set_fps(audio_samp_rate)
+        composit = composit.without_audio().set_audio(aud)
+        composit.resize(width=720*preview_resize).preview(fps=preview_fps)
         exit(0)
 
     def v(self,style="四国めたん",text="",say=None,is_same_timing=False,absolute_time=None,timing_offset=None):
