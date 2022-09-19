@@ -1029,10 +1029,7 @@ def main():
     Clip.char("ずんだもん", "困り顔")
     v("ずんだもん", f"麦ソーダなのだ")
     Clip.char("ずんだもん", "困り顔")
-    Clip.set_mark("preview_end")
 
-    Clip.preview(preview_range_by_mark=("preview_start","preview_end"))
-    
     Clip.char("四国めたん", "あっ")
     v("四国めたん", f"麦ソーダ")
 
@@ -1044,7 +1041,10 @@ def main():
     Clip.char("ずんだもん", "困り顔")
     v("ずんだもん", f"お昼ちょっと過ぎだったこともあって、激込みだったのだ")
     Clip.wait(0.2)
+    Clip.set_mark("preview_end")
 
+    Clip.preview(preview_range_by_mark=("preview_start","preview_end"))
+    
     Clip.char("四国めたん", "ペロ")
     v("四国めたん", f"ちょっと落ち着いたら食べに行ってみましょうか",f"ちょっと落ち着いたら、たべに行ってみましょうか")
     Clip.char("ずんだもん", f"イエー")
