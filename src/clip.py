@@ -8,6 +8,7 @@ import hashlib
 from voicevox_options import VoicevoxOptions
 from util import *
 from voicevox_requests import *
+import moviepy.audio.fx.all as afx
 
 class TelopOptions:
     def __init__(self, text_color: str = "white", text_size: int = 25):
@@ -611,10 +612,11 @@ class Clip:
                 offset = (current_bgm_end_time - play_end_time)
                 # 超えた分、再生時間を短くして、再生リストに追加。次のBGMの設定へ
                 next_bgm = next_bgm.set_duration(next_bgm.duration - offset)
-                new_bgm_clips.append(next_bgm)
+                new_bgm_clips.append(next_bgm.set_audio(next_bgm.audio.fx(afx.audio_fadeout, 1)))
                 continue
 
             # # いま流しているBGMが次のBGMより先に終わる場合
+            # TODO: ループエフェクトがあるらしいのでそれを使う (https://zulko.github.io/moviepy/ref/audiofx.html)
             if play_end_time > current_bgm_end_time:
                 while True:
                     # とりあえず今鳴らしている分を再生リストに追加。
@@ -632,7 +634,7 @@ class Clip:
                         offset = (current_bgm_end_time - play_end_time)
                         # 超えた分、再生時間を短くして、再生リストに追加。次のBGMの設定へ
                         next_bgm = next_bgm.set_duration(next_bgm.duration - offset)
-                        new_bgm_clips.append(next_bgm)
+                        new_bgm_clips.append(next_bgm.set_audio(next_bgm.audio.fx(afx.audio_fadeout, 0.2)))
                         break
                     # ループさせるBGMが、終了するべき時間を超えてなければもう一度同じBGMを鳴らす
 
@@ -675,6 +677,10 @@ class Clip:
         composit = composit.without_audio().set_audio(aud)
         composit.resize(width=720*preview_resize).preview(fps=preview_fps)
         exit(0)
+    
+    def show(self,timing=0):
+        composit = self.composit_movie(skip_audio_render=True)
+        composit.show(timing, interactive = True) 
 
     def v(self,style="四国めたん",text="",say=None,is_same_timing=False,absolute_time=None,timing_offset=None):
         self.ch_voice(style)

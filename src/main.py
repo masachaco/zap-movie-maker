@@ -183,6 +183,7 @@ def lunch(clip:Clip):
     clip.v("ずんだもん", f"視聴者の方々の、中山競馬場オススメの食べ物とかあったら、教えてほしいのだ")
     clip.wait(0.5)
 
+
     clip.se("./resource/se/pon.mp3")
     clip.main_visual("./resource/screen/キセキちゃん_ぬいぐるみ.png")
     clip.v("ずんだもん", f"ターフィーショップでキセキちゃんぬいぐるみも買って準備万端！")
@@ -368,7 +369,6 @@ def race(clip:Clip):
     clip.v("ずんだもん", f"ん？")
     clip.text( f"ん？","てんてんてんてんてん")
     clip.wait(1)
-
     clip.se("./resource/se/カメラのシャッター.mp3")
     clip.main_visual("./resource/movie/9r.mov",103,stop=True)
     clip.wait(1)
@@ -380,8 +380,10 @@ def race(clip:Clip):
     clip.se("./resource/se/カメラのシャッター.mp3")
     clip.main_visual("./resource/movie/9r.mov",104,stop=True)
     clip.wait(1)
+
     clip.main_visual("./resource/movie/9r.mov",104,108)
     clip.char("ずんだもん", "両手挙げ")
+    
     clip.v("ずんだもん", f"7番アマイちゃんなのだ！")
     clip.se("./resource/se/テッテレー.mp3")
     clip.se("./resource/se/kansei.mp3")
@@ -440,12 +442,10 @@ def main():
     # lunch(clip)
     # padock(clip)
     # yosou(clip)
-    # clip.set_mark("preview_start")
     race(clip)
-    # clip.set_mark("preview_end")
     # ending(clip)
-    clip.preview()
-    # clip.preview(range_by_mark=("preview_start","preview_end"))
+    # clip.show(10)
+    clip.preview(range_by_mark=("preview_start","preview_end"))
     # clip.create_movie(fps=1,range_by_mark=("preview_start","preview_end"))
 
 if __name__ == "__main__":
