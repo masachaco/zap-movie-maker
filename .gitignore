@@ -1,6 +1,7 @@
 resource/*
 image_magick/*
 voicevox_wav/*
+resource/psd/*
 output/*
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -1,2 +1,6 @@
 moviepy==1.0.3
 pyyaml==6.0
+python-pptx==0.6.21
+pywin32==304
+imageio[pyav]== 2.21.2
+psd-tools==1.9.22

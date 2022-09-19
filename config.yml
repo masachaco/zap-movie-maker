@@ -1,11 +1,11 @@
 # プレビューモード
 preview: 
-  enable: false
+  enable: true
   # プレビューとして　切り出しを開始する時間
-  start: 1
+  start: 260
   # プレビューとして　切り出しを終了する時間
-  end: 6
-
+  # end: 371
+  end: 371
 # NVIDIAのGPUが搭載されていれば対応したエンコーダを使うと出力が速くなります
 hasNvidiaGpu: false
 # 並列実行させる数。(だいたいの場合CPUのコア数を指定)
@@ -14,7 +14,7 @@ numOfThread: null
 movie:
   additional_time: 0
   # 出力ファイル名(拡張子は自動で付与されます)
-  output_filename: テスト動画
+  output_filename: vol1_4
 
   # 背景画像の設定
   background:
