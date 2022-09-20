@@ -12,7 +12,7 @@ class VoicevoxOptions:
             pitch :float = 0, 
             intonation: float = 1.0
         ):
-
+        self.engine = "voicevox"
         self.speaker_id = VoicevoxOptions.get_speaker_id(speakerName,speakerStyle)
         self.volume = volume
         self.speed = speed

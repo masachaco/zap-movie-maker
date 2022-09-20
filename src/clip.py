@@ -6,8 +6,10 @@ from moviepy.editor import *
 import os
 import hashlib
 from voicevox_options import VoicevoxOptions
+from voiceroid2_options import Voiceroid2Options
 from util import *
 from voicevox_requests import *
+from voiceroid2_requests import *
 import moviepy.audio.fx.all as afx
 
 class TelopOptions:
@@ -17,10 +19,10 @@ class TelopOptions:
 
 class CharacterVoice:
     def __init__(self, 
-                voicevoxOptions: VoicevoxOptions = VoicevoxOptions(), 
+                softwareTalkOptions: VoicevoxOptions = VoicevoxOptions(), 
                 telopOptions: TelopOptions = TelopOptions(),
         ):
-        self.voicevoxOptions = voicevoxOptions
+        self.softwareTalkOptions = softwareTalkOptions
         self.telopOptions = telopOptions
 
 class CharacterImageSettings:
@@ -165,7 +167,7 @@ class Clip:
         
         main_visual_clip = main_visual_clip.set_position(main_visual_potision)
         main_visual_clip = moviepy.video.fx.resize.resize(main_visual_clip, ratio, ratio)
-        main_visual_clip = main_visual_clip.fx(moviepy.audio.fx.all.volumex, 0)
+        main_visual_clip = main_visual_clip.fx(moviepy.audio.fx.all.volumex, 0.5)
 
         if options["is_background"]:
             main_visual_clip = main_visual_clip.fx(vfx.mask_color, color=[0, 255, 0], thr=100, s=5)
@@ -182,8 +184,12 @@ class Clip:
         telop_options = text_clip_options["telop_options"]
         say = text_clip_options["say"]
         hash = hashlib.md5(say.encode()).hexdigest()
-        if not skip_audio_render:
+        
+        if not skip_audio_render and text_clip_options["voice_engine"] == "voicevox":
             voice_vox_towav(say, f"{hash}.wav", text_clip_options["voice_option"])
+        if text_clip_options["voice_engine"] == "voiceroid2":
+            voiceroid2_towav(say, f"{hash}.wav", text_clip_options["voice_option"])
+
         audioclip = AudioFileClip(get_path(f"./voicevox_wav/{hash}.wav"))
         
         # Windowsの場合バックスラッシュでファイルパスが切られているとフォントを読み込めないので置換する
@@ -333,13 +339,13 @@ class Clip:
             "command": "voice",
             "telop": telop,
             "say": say,
-            "voice_engine": "voicevox",
+            "voice_engine": self.current_character.softwareTalkOptions.engine,
             "telop_options": self.current_character.telopOptions,
             "voice_option": {
-                "pitch": self.current_character.voicevoxOptions.pitch,
-                "speed": self.current_character.voicevoxOptions.speed,
-                "intonation": self.current_character.voicevoxOptions.intonation,
-                "speaker_id": self.current_character.voicevoxOptions.speaker_id,
+                "pitch": self.current_character.softwareTalkOptions.pitch,
+                "speed": self.current_character.softwareTalkOptions.speed,
+                "intonation": self.current_character.softwareTalkOptions.intonation,
+                "speaker_id": self.current_character.softwareTalkOptions.speaker_id,
                 "is_same_timing": is_same_timing,
                 "absolute_time":absolute_time,
                 "timing_offset": timing_offset
@@ -356,13 +362,13 @@ class Clip:
             "command": "text",
             "telop": telop,
             "say": say,
-            "voice_engine": "voicevox",
+            "voice_engine": self.current_character.softwareTalkOptions.engine,
             "telop_options": self.current_character.telopOptions,
             "voice_option": {
-                "pitch": self.current_character.voicevoxOptions.pitch,
-                "speed": self.current_character.voicevoxOptions.speed,
-                "intonation": self.current_character.voicevoxOptions.intonation,
-                "speaker_id": self.current_character.voicevoxOptions.speaker_id,
+                "pitch": self.current_character.softwareTalkOptions.pitch,
+                "speed": self.current_character.softwareTalkOptions.speed,
+                "intonation": self.current_character.softwareTalkOptions.intonation,
+                "speaker_id": self.current_character.softwareTalkOptions.speaker_id,
                 "is_same_timing": is_same_timing,
                 "absolute_time":absolute_time,
                 "timing_offset": timing_offset

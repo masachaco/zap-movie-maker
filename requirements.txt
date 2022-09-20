@@ -5,3 +5,4 @@ pywin32==304
 imageio[pyav]== 2.21.2
 psd-tools==1.9.22
 pygame==2.1.2
+git+https://github.com/Nkyoku/pyvcroid2.git@main
