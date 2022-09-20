@@ -40,6 +40,26 @@ def setup(clip:Clip):
     結月ゆかり=CharacterVoice(vop,top)
     clip.set_voice("結月ゆかり", 結月ゆかり)
 
+    vop = Voiceroid2Options(speakerName="紲星あかり",speakerStyle="ノーマル",speed=1.4,intonation=1.2,pitch=1.2)
+    top = TelopOptions(text_color="yellow")
+    紲星あかり=CharacterVoice(vop,top)
+    clip.set_voice("紲星あかり", 紲星あかり)
+
+    vop = Voiceroid2Options(speakerName="東北イタコ",speakerStyle="ノーマル",speed=1.2,intonation=1.2,pitch=1)
+    top = TelopOptions(text_color="white")
+    東北イタコ=CharacterVoice(vop,top)
+    clip.set_voice("東北イタコ", 東北イタコ)
+
+    vop = Voiceroid2Options(speakerName="京町セイカ",speakerStyle="ノーマル",speed=1,intonation=1.2,pitch=1)
+    top = TelopOptions(text_color="green")
+    京町セイカ=CharacterVoice(vop,top)
+    clip.set_voice("京町セイカ", 京町セイカ)
+
+    vop = Voiceroid2Options(speakerName="弦巻マキ",speakerStyle="ノーマル",speed=1.4,intonation=1.2,pitch=1.2)
+    top = TelopOptions(text_color="yellow")
+    弦巻マキ=CharacterVoice(vop,top)
+    clip.set_voice("弦巻マキ", 弦巻マキ)
+
     しょんぼりずんだもん=CharacterVoice(VoicevoxOptions(speakerName="ずんだもん", speakerStyle="ノーマル",speed=1.2,pitch=-0.05,intonation=0.7),TelopOptions(text_color="#33FF33"))
     clip.set_voice("しょんぼりずんだもん", しょんぼりずんだもん)
     clip.back_ground(get_slide_path(6))
@@ -109,13 +129,19 @@ def main():
 
     clip.main_visual("./resource/movie/splatoon.mp4",0, 0,stop=True)
     clip.se("./resource/se/pon.mp3")
-    clip.v("東北きりたん", f"東北きりたんにしゃべってもらうテストです！")
-    clip.v("東北きりたん", f"VOICEROID2に対応してみました！",f"ボイスロイドツーに対応してみました")
-    clip.wait(0.5)
-    clip.v("結月ゆかり", f"もちろん、ゆかりさんに喋ってもらうこともできます。")
+    clip.v("四国めたん", f"四国めたんです")
+    clip.v("ずんだもん", f"ずんだもんなのだ")
+    clip.v("東北イタコ", f"東北イタコです")
+    clip.v("琴葉茜", f"茜ちゃんやで")
+    clip.v("琴葉葵", f"葵です")
+    clip.v("弦巻マキ", f"弦巻マキだよー")
+    clip.v("結月ゆかり", f"ゆかりさんです")
+    clip.v("紲星あかり", f"紲星あかりです")
+    clip.v("京町セイカ", f"京町セイカです")
+
     clip.wait(0.5)
 
-
+    # clip.preview()
 
     # clip.v("琴葉葵", f"琴葉葵ちゃんにしゃべってもらうテストです！！")
     # clip.v("琴葉葵", f"VOICEROID2に対応してみました！！",f"ボイスロイドツーに対応してみました")
