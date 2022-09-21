@@ -41,11 +41,6 @@ def voiceroid2_towav(text, audio_filename, voiceroid_options):
         vc.param.pauseSentence = float(voiceroid_options["pauseSentence"])
         vc.param.masterVolume = float(voiceroid_options["masterVolume"])
 
-        vc.param.pauseMiddle = 80
-        vc.param.pauseLong = 100
-        vc.param.pauseSentence = 400
-        vc.param.masterVolume = 1
-
         # Text to speech
         speech, tts_events = vc.textToSpeech(text)
         audio_filepath = get_path(f"./voicevox_wav/{audio_filename}")
