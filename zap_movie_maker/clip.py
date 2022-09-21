@@ -185,7 +185,7 @@ class Clip:
             say = text_clip_options["voice_option"]["say"]
             # パラメータをベースにハッシュ値を生成。その値をファイル名にする
             print(str(text_clip_options["voice_option"]))
-            hash = hashlib.md5(json.dumps(str(text_clip_options["voice_option"]))).hexdigest()
+            hash = hashlib.md5(str(text_clip_options["voice_option"])).hexdigest()
             if not skip_audio_render and text_clip_options["voice_engine"] == "voicevox":
                 voice_vox_towav(say, f"{hash}.wav", text_clip_options["voice_option"])
             if text_clip_options["voice_engine"] == "voiceroid2":
