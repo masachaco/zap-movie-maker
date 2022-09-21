@@ -42,6 +42,8 @@ def voiceroid2_towav(text, audio_filename, voiceroid_options):
         vc.param.masterVolume = float(voiceroid_options["masterVolume"])
 
         # Text to speech
+        # 2行以上話さないと、pauseSentenceが効かないため改行して。を追加
+        text = f"{text}\n。"
         speech, tts_events = vc.textToSpeech(text)
         audio_filepath = get_path(f"./voicevox_wav/{audio_filename}")
         print("ファイルを出力します",text)
