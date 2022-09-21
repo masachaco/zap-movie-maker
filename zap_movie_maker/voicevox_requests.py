@@ -1,6 +1,6 @@
 import requests
 import time
-from util import *
+from .util import *
 import json
 
 def get_voicevox_audio_query(text, voice_vox_options):
