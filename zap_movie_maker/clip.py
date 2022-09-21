@@ -305,14 +305,11 @@ class Clip:
     def set_voice(self, characterName :str, characterOptions: CharacterVoice):
         self.characters[characterName] = characterOptions
 
-    def add_character(self, name:str="デフォルト", characterImage: CharacterImageSettings = CharacterImageSettings()):
-        if name not in self.character_images:
-            self.character_images[name] = {
-                "image_settings": characterImage,
-                "style": {
-                    "デフォルト": CharacterImageStyle()
-                }
-            }
+    def add_character_style(self,character_name :str="デフォルト", style_name :str="ノーマル", image_path:str="./resource/character/tachie-normal.png"):
+        if character_name not in self.character_images:
+            self.add_character(character_name, CharacterImageSettings())
+
+        self.character_images[character_name]["style"][style_name] = CharacterImageStyle(image_path=image_path, name=style_name)
 
     def add_character_style(self,name :str="デフォルト", characterOptions: CharacterImageStyle = CharacterImageStyle()):
         if name not in self.character_images:
