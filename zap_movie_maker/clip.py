@@ -459,11 +459,6 @@ class Clip:
             print("プロジェクト設定(config.yml)の作成方法はREADME.mdを確認してください。")
             exit(1)
 
-        if not os.path.exists(get_path(f"./script.csv")):
-            print("シナリオファイル(script.csv)が存在しません。config.ymlを作成してください")
-            print("シナリオファイル(script.csv)の作成方法はREADME.mdを確認してください。")
-            exit(1)
-
         self.config = load_conf(get_path(f"./config.yml"))
         print(self.config)
         # 動画の長さや、各種クリップ
