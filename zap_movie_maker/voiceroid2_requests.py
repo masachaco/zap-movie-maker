@@ -37,7 +37,7 @@ def voiceroid2_towav(text, audio_filename, voiceroid_options):
         vc.param.pitch = float(voiceroid_options["pitch"])
         vc.param.emphasis = float(voiceroid_options["intonation"])
         vc.param.pauseMiddle = float(voiceroid_options["intonation"])
-        vc.param.pauseLong = float(voiceroid_options["pausLong"])
+        vc.param.pauseLong = float(voiceroid_options["pauseLong"])
         vc.param.pauseSentence = float(voiceroid_options["pauseSentence"])
         vc.param.masterVolume = float(voiceroid_options["masterVolume"])
 
