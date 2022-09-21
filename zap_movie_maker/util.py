@@ -12,12 +12,7 @@ def get_base_path():
     """
     global BASE_PATH
     if BASE_PATH is None:
-        before_path = os.getcwd()
-        source_code_path = os.path.dirname(os.path.abspath(__file__))
-        os.chdir(source_code_path)
-        os.chdir("../")
         BASE_PATH = os.getcwd()
-        os.chdir(before_path)
     return BASE_PATH
 
 
