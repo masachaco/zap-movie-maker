@@ -5,6 +5,8 @@ import hashlib
 from .util import *
 from .voicevox_requests import *
 from .voiceroid2_requests import *
+from .voicevox_options import *
+from .voiceroid2_options import *
 import moviepy.audio.fx.all as afx
 import json
 
