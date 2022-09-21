@@ -6,3 +6,5 @@ imageio[pyav]== 2.21.2
 psd-tools==1.9.22
 pygame==2.1.2
 git+https://github.com/Nkyoku/pyvcroid2.git@main
+sphinx==5.1.1
+sphinx-rtd-theme==1.0.0
