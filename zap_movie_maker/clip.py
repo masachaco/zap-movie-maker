@@ -377,7 +377,7 @@ class Clip:
                 "speaker_id": self.current_character.softwareTalkOptions.speaker_id,
                 "is_same_timing": is_same_timing,
                 "absolute_time":absolute_time,
-                "timing_offset": timing_offset
+                "timing_offset": timing_offset,
             }
         })
         print(self.scripts[-1])
@@ -407,6 +407,7 @@ class Clip:
         self.scripts.append({
             "command": command,
             "filepath": path,
+            "volume": 0,
             "options": {
                 "from": from_sec,
                 "to": to_sec,
@@ -414,7 +415,7 @@ class Clip:
                 "is_fullscreen": True,
                 "is_mute": is_mute,
                 "stop": stop,
-                "resize_base": "height"
+                "resize_base": "height",
             }
         })
 
