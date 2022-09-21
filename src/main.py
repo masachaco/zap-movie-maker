@@ -5,6 +5,7 @@ from moviepy.editor import *
 from voicevox_options import *
 from voiceroid2_options import *
 from clip import *
+import platform
 
 def setup(clip:Clip):
     # めたんちゃんの設定
@@ -20,12 +21,12 @@ def setup(clip:Clip):
     ずんだもん=CharacterVoice(vop,top)
     clip.set_voice("ずんだもん", ずんだもん)
     
-    vop = Voiceroid2Options(speakerName="琴葉茜",speakerStyle="関西弁",speed=1.5,intonation=2)
+    vop = Voiceroid2Options(speakerName="琴葉茜_v2",speakerStyle="関西弁",speed=1.5,intonation=2)
     top = TelopOptions(text_color="red")
     琴葉茜_関西弁=CharacterVoice(vop,top)
     clip.set_voice("琴葉茜", 琴葉茜_関西弁)
 
-    vop = Voiceroid2Options(speakerName="琴葉葵",speakerStyle="ノーマル",speed=1.5,intonation=1.2,pitch=1.1)
+    vop = Voiceroid2Options(speakerName="琴葉葵_v2",speakerStyle="ノーマル",speed=1.5,intonation=1.2,pitch=1.1)
     top = TelopOptions(text_color="blue")
     琴葉葵=CharacterVoice(vop,top)
     clip.set_voice("琴葉葵", 琴葉葵)
@@ -40,12 +41,12 @@ def setup(clip:Clip):
     結月ゆかり=CharacterVoice(vop,top)
     clip.set_voice("結月ゆかり", 結月ゆかり)
 
-    vop = Voiceroid2Options(speakerName="紲星あかり",speakerStyle="ノーマル",speed=1.4,intonation=1.2,pitch=1.2)
+    vop = Voiceroid2Options(speakerName="紲星あかり_v2",speakerStyle="ノーマル",speed=1.4,intonation=1.2,pitch=1.2)
     top = TelopOptions(text_color="yellow")
     紲星あかり=CharacterVoice(vop,top)
     clip.set_voice("紲星あかり", 紲星あかり)
 
-    vop = Voiceroid2Options(speakerName="東北イタコ",speakerStyle="ノーマル",speed=1.2,intonation=1.2,pitch=1)
+    vop = Voiceroid2Options(speakerName="東北イタコ_v2",speakerStyle="ノーマル",speed=1.2,intonation=1.2,pitch=1)
     top = TelopOptions(text_color="white")
     東北イタコ=CharacterVoice(vop,top)
     clip.set_voice("東北イタコ", 東北イタコ)
@@ -140,15 +141,6 @@ def main():
     clip.v("京町セイカ", f"京町セイカです")
 
     clip.wait(0.5)
-
-    # clip.preview()
-
-    # clip.v("琴葉葵", f"琴葉葵ちゃんにしゃべってもらうテストです！！")
-    # clip.v("琴葉葵", f"VOICEROID2に対応してみました！！",f"ボイスロイドツーに対応してみました")
-    # clip.wait(1)
-    # clip.preview()
-    # clip.show(10)
-    # clip.preview()
     clip.create_movie()
 
 if __name__ == "__main__":

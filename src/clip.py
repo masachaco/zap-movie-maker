@@ -1,3 +1,4 @@
+from email.mime import audio
 from inspect import isfunction
 from operator import is_
 from unicodedata import name
@@ -11,6 +12,7 @@ from util import *
 from voicevox_requests import *
 from voiceroid2_requests import *
 import moviepy.audio.fx.all as afx
+import json
 
 class TelopOptions:
     def __init__(self, text_color: str = "white", text_size: int = 25):
@@ -167,7 +169,7 @@ class Clip:
         
         main_visual_clip = main_visual_clip.set_position(main_visual_potision)
         main_visual_clip = moviepy.video.fx.resize.resize(main_visual_clip, ratio, ratio)
-        main_visual_clip = main_visual_clip.fx(moviepy.audio.fx.all.volumex, 0.5)
+        main_visual_clip = main_visual_clip.fx(moviepy.audio.fx.all.volumex, float(options["volume"]))
 
         if options["is_background"]:
             main_visual_clip = main_visual_clip.fx(vfx.mask_color, color=[0, 255, 0], thr=100, s=5)
@@ -182,16 +184,22 @@ class Clip:
         # TODO: このハッシュ生成処理が重いので修正する。
         # TODO: パラメータ変更の場合古い音声を使ってしまうので修正する。
         telop_options = text_clip_options["telop_options"]
-        say = text_clip_options["say"]
-        hash = hashlib.md5(say.encode()).hexdigest()
         
-        if not skip_audio_render and text_clip_options["voice_engine"] == "voicevox":
-            voice_vox_towav(say, f"{hash}.wav", text_clip_options["voice_option"])
-        if text_clip_options["voice_engine"] == "voiceroid2":
-            voiceroid2_towav(say, f"{hash}.wav", text_clip_options["voice_option"])
+        audioclip = None
+        if text_clip_options["voice_option"]["audio_file_path"] is None:
+            say = text_clip_options["say"]
+            # パラメータをベースにハッシュ値を生成。その値をファイル名にする
+            hash = hashlib.md5(json.dumps(text_clip_options)).hexdigest()
+            if not skip_audio_render and text_clip_options["voice_engine"] == "voicevox":
+                voice_vox_towav(say, f"{hash}.wav", text_clip_options["voice_option"])
+            if text_clip_options["voice_engine"] == "voiceroid2":
+                voiceroid2_towav(say, f"{hash}.wav", text_clip_options["voice_option"])
+            audioclip = AudioFileClip(get_path(f"./voicevox_wav/{hash}.wav"))
+        else:
+            audioclip = AudioFileClip(get_path(text_clip_options["voice_option"]["audio_file_path"]))
 
-        audioclip = AudioFileClip(get_path(f"./voicevox_wav/{hash}.wav"))
-        
+
+
         # Windowsの場合バックスラッシュでファイルパスが切られているとフォントを読み込めないので置換する
         font_path = get_path(self.config["movie"]["text"]["font_normal"]).replace("\\", "/")
         
@@ -217,7 +225,7 @@ class Clip:
             y += 10
         text_position = (x, y)
 
-        txtclip = txtclip.set_duration(float(audioclip.duration)).set_position(text_position).fx(moviepy.audio.fx.all.volumex, 1.2)
+        txtclip = txtclip.set_duration(float(audioclip.duration)).set_position(text_position).fx(moviepy.audio.fx.all.volumex, float(text_clip_options["volume"]))
 
         # 読み上げる場合は音声を設定
         if has_audio:
@@ -330,10 +338,9 @@ class Clip:
         })
         print(self.scripts[-1])
 
-    def voice(self, telop :str,say :str = None,is_same_timing=False,absolute_time=None,timing_offset=None) -> None:
+    def voice(self, telop :str,say :str = None,is_same_timing=False,absolute_time=None,timing_offset=None,audio_file_path=None,volume=1.2) -> None:
         if say is None:
             say = telop
-
 
         self.scripts.append({
             "command": "voice",
@@ -341,7 +348,9 @@ class Clip:
             "say": say,
             "voice_engine": self.current_character.softwareTalkOptions.engine,
             "telop_options": self.current_character.telopOptions,
+            "volume": volume,
             "voice_option": {
+                "audio_file_path": audio_file_path,
                 "pitch": self.current_character.softwareTalkOptions.pitch,
                 "speed": self.current_character.softwareTalkOptions.speed,
                 "intonation": self.current_character.softwareTalkOptions.intonation,
@@ -353,10 +362,9 @@ class Clip:
         })
         print(self.scripts[-1])
 
-    def text(self, telop :str,say :str = None,is_same_timing=False,absolute_time=None,timing_offset=None) -> None:
+    def text(self, telop :str,say :str = None,is_same_timing=False,absolute_time=None,timing_offset=None,audio_file_path=None) -> None:
         if say is None:
             say = telop
-
 
         self.scripts.append({
             "command": "text",
@@ -364,7 +372,9 @@ class Clip:
             "say": say,
             "voice_engine": self.current_character.softwareTalkOptions.engine,
             "telop_options": self.current_character.telopOptions,
+            "volume": 0,
             "voice_option": {
+                "audio_file_path": audio_file_path,
                 "pitch": self.current_character.softwareTalkOptions.pitch,
                 "speed": self.current_character.softwareTalkOptions.speed,
                 "intonation": self.current_character.softwareTalkOptions.intonation,
@@ -376,7 +386,7 @@ class Clip:
         })
         print(self.scripts[-1])
 
-    def main_visual(self, path, from_sec=0,to_sec=-1, is_fullscreen=False,is_mute=False, stop=False):
+    def main_visual(self, path, from_sec=0,to_sec=-1, is_fullscreen=False,is_mute=False, stop=False,volume=0.5):
         command = "main_visual"
         if is_fullscreen:
             command = "full_screen_visual"
@@ -390,7 +400,8 @@ class Clip:
                 "is_fullscreen": is_fullscreen,
                 "is_mute": is_mute,
                 "stop": stop,
-                "resize_base": "height"
+                "resize_base": "height",
+                "volume": volume,
             }
         })
 
@@ -422,17 +433,19 @@ class Clip:
         })
         pass
 
-    def bgm(self, file_path):
+    def bgm(self, file_path,volume=0.1):
         self.scripts.append({
             "command": "bgm",
-            "file_path": file_path
+            "file_path": file_path,
+            "volume":volume,
         })
         pass
 
-    def se(self, file_path):
+    def se(self, file_path,volume=0.3):
         self.scripts.append({
             "command": "se",
-            "file_path": file_path
+            "file_path": file_path,
+            "volume": volume
         })
         pass
 
@@ -491,11 +504,11 @@ class Clip:
                 self.movie["text_clips"].append(txtclip)
                 pass
             if command == "bgm":
-                bgmclip = self.create_audio_clip(script, self.movie["current_duration"], 0.1)
+                bgmclip = self.create_audio_clip(script, self.movie["current_duration"], script["volume"])
                 self.movie["bgm_clips"].append(bgmclip)
                 pass
             if command == "se":
-                seclip = self.create_audio_clip(script, self.movie["current_duration"], 0.3)
+                seclip = self.create_audio_clip(script, self.movie["current_duration"], script["volume"])
                 self.movie["se_clips"].append(seclip)
                 pass
             if command == "wait":
@@ -575,11 +588,6 @@ class Clip:
         output_end_time = float(total_duration)
 
         # プレビューしたい場合は設定値の指定した範囲だけを動画に書き出す
-        # if self.config["preview"]["enable"]:
-        #     output_start_time = self.config["preview"]["start"]
-        #     if self.config["preview"]["end"] != -1:
-        #         output_end_time = self.config["preview"]["end"]
-
         # 各種クリップを1つのクリップにまとめて
         # TODO: 動画のサイズを変更できるようにする
         composit = CompositeVideoClip(output_layers, size=(1280, 720))

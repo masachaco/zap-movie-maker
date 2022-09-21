@@ -3,6 +3,7 @@ import shutil
 import win32com.client
 import yaml
 import csv
+import platform
 
 BASE_PATH = None
 def get_base_path():
@@ -62,6 +63,11 @@ def get_slide_path(index):
     return get_path(f"./resource/slide_img/スライド{index}.PNG")
 
 def conv_pptx_to_img(pptx_path):
+    os = platform.system()
+    if os != "Windows":
+        print("現在、パワーポイントの自動画像書き出しはWindowsのみ対応しています")
+        exit(0)
+
     from_path = get_path(pptx_path)
     to_path = get_path("./resource/temp_slide/temp_slide.pptx")
     shutil.copyfile(from_path, to_path)
