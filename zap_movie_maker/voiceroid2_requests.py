@@ -1,7 +1,5 @@
 from util import *
 import pyvcroid2
-import time
-import winsound
 
 
 def voiceroid2_towav(text, audio_filename, voice_vox_options):

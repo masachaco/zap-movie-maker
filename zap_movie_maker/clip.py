@@ -1,16 +1,10 @@
-from email.mime import audio
-from inspect import isfunction
-from operator import is_
-from unicodedata import name
 import moviepy
 from moviepy.editor import *
 import os
 import hashlib
-from voicevox_options import VoicevoxOptions
-from voiceroid2_options import Voiceroid2Options
-from util import *
-from voicevox_requests import *
-from voiceroid2_requests import *
+from .util import *
+from .voicevox_requests import *
+from .voiceroid2_requests import *
 import moviepy.audio.fx.all as afx
 import json
 

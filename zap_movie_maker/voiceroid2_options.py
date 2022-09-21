@@ -1,5 +1,3 @@
-import requests
-
 class Voiceroid2Options:
     _skpeakers=None
 

@@ -1,7 +1,4 @@
-from email.mime import base
-from select import select
 import psd_tools
-from enum import Enum
 
 class PsdUtil:
     target_layers = []
