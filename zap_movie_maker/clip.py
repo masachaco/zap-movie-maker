@@ -498,12 +498,14 @@ class Clip:
                 pass
             if command == "voice":
                 txtclip = self.create_text_clip(self.movie["text_clips"], script, self.movie["current_duration"], True,skip_audio_render=skip_audio_render)
-                self.movie["current_duration"] += txtclip.duration
+                if script["voice_option"]["absolute_time"] is None:
+                    self.movie["current_duration"] = txtclip.start + txtclip.duration
                 self.movie["text_clips"].append(txtclip)
                 pass
             if command == "text":
                 txtclip = self.create_text_clip(self.movie["text_clips"], script, self.movie["current_duration"], False,skip_audio_render=skip_audio_render)
-                self.movie["current_duration"] += txtclip.duration
+                if script["voice_option"]["absolute_time"] is None:
+                    self.movie["current_duration"] = txtclip.start + txtclip.duration
                 self.movie["text_clips"].append(txtclip)
                 pass
             if command == "bgm":
