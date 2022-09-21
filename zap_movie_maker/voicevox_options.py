@@ -18,6 +18,12 @@ class VoicevoxOptions:
         self.speed = speed
         self.pitch = pitch
         self.intonation = intonation
+        # voicevoxにはこれらの設定は効かないので固定値
+        self.pauseMiddle = 1
+        self.pauseLong = 1
+        self.pauseSentence = 1
+        self.masterVolume = 1
+
 
     @classmethod
     def get_speakers(cls):

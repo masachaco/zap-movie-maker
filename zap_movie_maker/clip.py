@@ -357,7 +357,11 @@ class Clip:
                 "speaker_id": self.current_character.softwareTalkOptions.speaker_id,
                 "is_same_timing": is_same_timing,
                 "absolute_time":absolute_time,
-                "timing_offset": timing_offset
+                "timing_offset": timing_offset,
+                "pauseMiddl": self.current_character.softwareTalkOptions.pauseMiddle,
+                "pauseLong": self.current_character.softwareTalkOptions.pauseLong,
+                "pauseSentence": self.current_character.softwareTalkOptions.pauseSentence,
+                "masterVolume": self.current_character.softwareTalkOptions.masterVolume,
             }
         })
         print(self.scripts[-1])
@@ -384,7 +388,7 @@ class Clip:
                 "speaker_id": self.current_character.softwareTalkOptions.speaker_id,
                 "is_same_timing": is_same_timing,
                 "absolute_time":absolute_time,
-                "timing_offset": timing_offset
+                "timing_offset": timing_offset,
             }
         })
         print(self.scripts[-1])

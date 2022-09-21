@@ -13,7 +13,7 @@ class Voiceroid2Options:
             pauseMiddle : int = 80,
             pauseLong : int = 100,
             pauseSentence : int = 400,
-            masterVolume : float = 1,
+            voiceroidMasterVolume : float = 1,
         ):
         self.engine = "voiceroid2"
         if speaker_id is None:
@@ -27,7 +27,7 @@ class Voiceroid2Options:
         self.pauseMiddle = pauseMiddle
         self.pauseLong = pauseLong
         self.pauseSentence = pauseSentence
-        self.masterVolume = masterVolume
+        self.masterVolume = voiceroidMasterVolume
 
     @classmethod
     def get_speakers(cls):
