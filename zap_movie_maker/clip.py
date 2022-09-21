@@ -389,6 +389,7 @@ class Clip:
         self.scripts.append({
             "command": command,
             "filepath": path,
+            "volume": volume,
             "options": {
                 "from": from_sec,
                 "to": to_sec,
@@ -397,7 +398,6 @@ class Clip:
                 "is_mute": is_mute,
                 "stop": stop,
                 "resize_base": "height",
-                "volume": volume,
             }
         })
 
