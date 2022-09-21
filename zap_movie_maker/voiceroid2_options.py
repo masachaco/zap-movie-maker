@@ -9,7 +9,11 @@ class Voiceroid2Options:
             speed :float = 1.0, 
             pitch :float = 1.0, 
             intonation: float = 1.0,
-            speaker_id: str = None
+            speaker_id: str = None,
+            pauseMiddle : int = 80,
+            pauseLong : int = 100,
+            pauseSentence : int = 400,
+            masterVolume : float = 1,
         ):
         self.engine = "voiceroid2"
         if speaker_id is None:
@@ -20,6 +24,10 @@ class Voiceroid2Options:
         self.speed = speed
         self.pitch = pitch
         self.intonation = intonation
+        self.pauseMiddle = pauseMiddle
+        self.pauseLong = pauseLong
+        self.pauseSentence = pauseSentence
+        self.masterVolume = masterVolume
 
     @classmethod
     def get_speakers(cls):

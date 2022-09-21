@@ -2,13 +2,13 @@ from .util import *
 import pyvcroid2
 
 
-def voiceroid2_towav(text, audio_filename, voice_vox_options):
+def voiceroid2_towav(text, audio_filename, voiceroid_options):
     """
     VOICEVOXから音声を生成してファイルに保存
     """
     with pyvcroid2.VcRoid2() as vc:
-        voice = voice_vox_options["speaker_id"].split(":")[0]
-        style = voice_vox_options["speaker_id"].split(":")[1]
+        voice = voiceroid_options["speaker_id"].split(":")[0]
+        style = voiceroid_options["speaker_id"].split(":")[1]
         vc.loadLanguage(style)
         vc.loadVoice(voice)
         print("発話スタイル:",voice,style)
@@ -33,9 +33,14 @@ def voiceroid2_towav(text, audio_filename, voice_vox_options):
         # }
         # Set parameters
         vc.param.volume = 2
-        vc.param.speed = float(voice_vox_options["speed"])
-        vc.param.pitch = float(voice_vox_options["pitch"])
-        vc.param.emphasis = float(voice_vox_options["intonation"])
+        vc.param.speed = float(voiceroid_options["speed"])
+        vc.param.pitch = float(voiceroid_options["pitch"])
+        vc.param.emphasis = float(voiceroid_options["intonation"])
+        vc.param.pauseMiddle = float(voiceroid_options["intonation"])
+        vc.param.pauseLong = float(voiceroid_options["pausLong"])
+        vc.param.pauseSentence = float(voiceroid_options["pauseSentence"])
+        vc.param.masterVolume = float(voiceroid_options["masterVolume"])
+
         vc.param.pauseMiddle = 80
         vc.param.pauseLong = 100
         vc.param.pauseSentence = 400
