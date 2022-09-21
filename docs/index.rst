@@ -3,8 +3,10 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to zap-movie-maker's documentation!
+zap-movie-maker
 ===========================================
+
+zap-movie-makerは、Python形式、CSV形式で動画を作成することができるツールです
 
 .. toctree::
    :maxdepth: 2
