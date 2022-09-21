@@ -38,7 +38,7 @@ def voiceroid2_towav(text, audio_filename, voice_vox_options):
         vc.param.emphasis = float(voice_vox_options["intonation"])
         vc.param.pauseMiddle = 80
         vc.param.pauseLong = 100
-        vc.param.pauseSentence = 200
+        vc.param.pauseSentence = 400
         vc.param.masterVolume = 1
 
         # Text to speech
