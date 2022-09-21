@@ -1,2 +1,2 @@
-set IMAGEMAGICK_BINARY=.\image_magick\magick.exe
+set IMAGEMAGICK_BINARY=.\magick.exe
 python src/main.py
