@@ -498,12 +498,14 @@ class Clip:
                 pass
             if command == "voice":
                 txtclip = self.create_text_clip(self.movie["text_clips"], script, self.movie["current_duration"], True,skip_audio_render=skip_audio_render)
+                # TODO: abusolute_timeで指定した後にis_sametimeすると時間軸がバグるので別クリップに分けたい
                 if script["voice_option"]["absolute_time"] is None:
                     self.movie["current_duration"] = txtclip.start + txtclip.duration
                 self.movie["text_clips"].append(txtclip)
                 pass
             if command == "text":
                 txtclip = self.create_text_clip(self.movie["text_clips"], script, self.movie["current_duration"], False,skip_audio_render=skip_audio_render)
+                # TODO: abusolute_timeで指定した後にis_sametimeすると時間軸がバグるので別クリップに分けたい
                 if script["voice_option"]["absolute_time"] is None:
                     self.movie["current_duration"] = txtclip.start + txtclip.duration
                 self.movie["text_clips"].append(txtclip)
@@ -585,6 +587,7 @@ class Clip:
                 self.movie["fullscreen_visual_clips"][-1] = self.movie["fullscreen_visual_clips"][-1].set_duration(last_video_duration)
             output_layers.extend(self.movie["fullscreen_visual_clips"])
 
+        # TODO:　最終段階でテロップ位置の自動調整を入れたい
 
         # 動画出力を開始する時間
         output_start_time = 0
