@@ -12,7 +12,7 @@ class Voiceroid2Options:
             speaker_id: str = None,
             pauseMiddle : int = 80,
             pauseLong : int = 100,
-            pauseSentence : int = 400,
+            pauseSentence : int = 200,
             voiceroidMasterVolume : float = 1,
         ):
         self.engine = "voiceroid2"
