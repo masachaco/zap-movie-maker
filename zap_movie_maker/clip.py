@@ -179,14 +179,13 @@ class Clip:
         # ファイル名はハッシュで振っておいて簡易的にキャッシュできるようにする
         # TODO: このハッシュ生成処理が重いので修正する。
         # TODO: パラメータ変更の場合古い音声を使ってしまうので修正する。
-        telop_options = text_clip_options["telop_options"]
         
         audioclip = None
         if text_clip_options["voice_option"]["audio_file_path"] is None:
-            say = text_clip_options["say"]
+            say = text_clip_options["voice_option"]["say"]
             # パラメータをベースにハッシュ値を生成。その値をファイル名にする
-            print(vars(text_clip_options))
-            hash = hashlib.md5(json.dumps(vars(text_clip_options))).hexdigest()
+            print(vars(text_clip_options["voice_option"]))
+            hash = hashlib.md5(json.dumps(vars(text_clip_options["voice_option"]))).hexdigest()
             if not skip_audio_render and text_clip_options["voice_engine"] == "voicevox":
                 voice_vox_towav(say, f"{hash}.wav", text_clip_options["voice_option"])
             if text_clip_options["voice_engine"] == "voiceroid2":
@@ -202,15 +201,14 @@ class Clip:
         
         telop = text_clip_options["telop"]
         print("telop:",telop)
-
         txtclip = TextClip(
             f"{telop}",
             method="label",
             size=(2000, 30),
             align="West",
-            fontsize=float(telop_options.text_size),
+            fontsize=float(text_clip_options["telop_options"]["text_size"]),
             font=font_path,
-            color=telop_options.text_color,
+            color=text_clip_options["telop_options"]["text_color"],
         )
 
         # テロップの表示位置
@@ -342,11 +340,14 @@ class Clip:
         self.scripts.append({
             "command": "voice",
             "telop": telop,
-            "say": say,
             "voice_engine": self.current_character.softwareTalkOptions.engine,
-            "telop_options": self.current_character.telopOptions,
+            "telop_options": {
+                "text_color":  self.current_character.telopOptions.text_color,
+                "text_size":  self.current_character.telopOptions.text_size,
+            },
             "volume": volume,
             "voice_option": {
+                "say": say,
                 "audio_file_path": audio_file_path,
                 "pitch": self.current_character.softwareTalkOptions.pitch,
                 "speed": self.current_character.softwareTalkOptions.speed,
@@ -366,11 +367,14 @@ class Clip:
         self.scripts.append({
             "command": "text",
             "telop": telop,
-            "say": say,
             "voice_engine": self.current_character.softwareTalkOptions.engine,
-            "telop_options": self.current_character.telopOptions,
+            "telop_options": {
+                "text_color":  self.current_character.telopOptions.text_color,
+                "text_size":  self.current_character.telopOptions.text_size,
+            },
             "volume": 0,
             "voice_option": {
+                "say": say,
                 "audio_file_path": audio_file_path,
                 "pitch": self.current_character.softwareTalkOptions.pitch,
                 "speed": self.current_character.softwareTalkOptions.speed,
@@ -378,7 +382,7 @@ class Clip:
                 "speaker_id": self.current_character.softwareTalkOptions.speaker_id,
                 "is_same_timing": is_same_timing,
                 "absolute_time":absolute_time,
-                "timing_offset": timing_offset,
+                "timing_offset": timing_offset
             }
         })
         print(self.scripts[-1])
