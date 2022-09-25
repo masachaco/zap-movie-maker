@@ -55,6 +55,7 @@ class Clip:
             "main_visual_clips": [],
             "fullscreen_visual_clips":[],
             "text_clips": [],
+            "absolute_text_clips": [],
             "se_clips": [],
             "bgm_clips": [],
             "wait_clips": [],
@@ -497,18 +498,24 @@ class Clip:
                 self.movie["character_clips"][script["options"]["name"]].append(character_clip)
                 pass
             if command == "voice":
-                txtclip = self.create_text_clip(self.movie["text_clips"], script, self.movie["current_duration"], True,skip_audio_render=skip_audio_render)
+                clips = self.movie["text_clips"]
+                if script["voice_option"]["absolute_time"] is not None:
+                    clips = self.movie["absolute_text_clips"]
+                txtclip = self.create_text_clip(clips, script, self.movie["current_duration"], True,skip_audio_render=skip_audio_render)
                 # TODO: abusolute_timeで指定した後にis_sametimeすると時間軸がバグるので別クリップに分けたい
                 if script["voice_option"]["absolute_time"] is None:
                     self.movie["current_duration"] = txtclip.start + txtclip.duration
-                self.movie["text_clips"].append(txtclip)
+                clips.append(txtclip)
                 pass
             if command == "text":
-                txtclip = self.create_text_clip(self.movie["text_clips"], script, self.movie["current_duration"], False,skip_audio_render=skip_audio_render)
+                clips = self.movie["text_clips"]
+                if script["voice_option"]["absolute_time"] is not None:
+                    clips = self.movie["absolute_text_clips"]
+                txtclip = self.create_text_clip(clips, script, self.movie["current_duration"], False,skip_audio_render=skip_audio_render)
                 # TODO: abusolute_timeで指定した後にis_sametimeすると時間軸がバグるので別クリップに分けたい
                 if script["voice_option"]["absolute_time"] is None:
                     self.movie["current_duration"] = txtclip.start + txtclip.duration
-                self.movie["text_clips"].append(txtclip)
+                clips.append(txtclip)
                 pass
             if command == "bgm":
                 bgmclip = self.create_audio_clip(script, self.movie["current_duration"], script["volume"])
@@ -553,6 +560,9 @@ class Clip:
         # テロップクリップがあれば出力レイヤに追加
         if len(self.movie["text_clips"]) > 0:
             output_layers.extend(self.movie["text_clips"])
+
+        if len(self.movie["absolute_text_clips"]) > 0:
+            output_layers.extend(self.movie["absolute_text_clips"])
 
         # 効果音クリップがあれば出力レイヤに追加
         if len(self.movie["se_clips"]) > 0:
