@@ -714,6 +714,6 @@ class Clip:
         composit = self.composit_movie(skip_audio_render=True)
         composit.show(timing, interactive = True) 
 
-    def v(self,style="四国めたん",text="",say=None,is_same_timing=False,absolute_time=None,timing_offset=None):
+    def v(self,style="四国めたん",text="",say=None,is_same_timing=False,absolute_time=None,timing_offset=None,audio_file_path=None):
         self.ch_voice(style)
-        self.voice(text,say,is_same_timing,absolute_time,timing_offset)
+        self.voice(text,say,is_same_timing,absolute_time,timing_offset,audio_file_path=audio_file_path)
