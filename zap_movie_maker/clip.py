@@ -3,6 +3,7 @@ from moviepy.editor import *
 import os
 import hashlib
 from .util import *
+from .telop import create_fuchidori_telop_image
 from .voicevox_requests import *
 from .voiceroid2_requests import *
 from .voicevox_options import *
@@ -63,6 +64,9 @@ class Clip:
             "character_clips": {},
         }
         self.mark = {}
+    
+    def create_telop_image(self,text,font_path,font_size,fill_color="white",stroke_fill_color="black",background_color="white"):
+        return create_fuchidori_telop_image(text,font_path,font_size,fill_color,stroke_fill_color,background_color)
 
     def is_imagefile(self, filetype):
         """
@@ -201,16 +205,23 @@ class Clip:
         font_path = get_path(self.config["movie"]["text"]["font_normal"]).replace("\\", "/")
         
         telop = text_clip_options["telop"]
-        print("telop:",telop)
-        txtclip = TextClip(
-            f"{telop}",
-            method="label",
-            size=(2000, 30),
-            align="West",
-            fontsize=float(text_clip_options["telop_options"]["text_size"]),
-            font=font_path,
-            color=text_clip_options["telop_options"]["text_color"],
+        telop_image_path = self.create_telop_image(
+            text=telop,
+            font_path=font_path,
+            font_size=float(text_clip_options["telop_options"]["text_size"]),
+            stroke_fill_color=text_clip_options["telop_options"]["text_color"],
         )
+        print("telop:", telop_image_path)
+        txtclip = ImageClip(telop_image_path).fx(vfx.mask_color, color=[0, 255, 0], thr=100, s=5).set_start(current_duration).set_duration(1)
+        # txtclip = TextClip(
+        #     f"{telop}",
+        #     method="label",
+        #     size=(2000, 30),
+        #     align="West",
+        #     fontsize=float(text_clip_options["telop_options"]["text_size"]),
+        #     font=font_path,
+        #     color=text_clip_options["telop_options"]["text_color"],
+        # )
 
         # テロップの表示位置
         
