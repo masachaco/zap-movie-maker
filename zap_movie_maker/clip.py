@@ -45,7 +45,6 @@ class CharacterImageStyle:
 
 class Clip:
     def __init__(self):
-        self.結月ゆかり = 結月ゆかり(self)
         self.config = None
         self.characters = {"default": CharacterVoice()}
         self.character_images = {}
