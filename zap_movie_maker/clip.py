@@ -45,6 +45,7 @@ class CharacterImageStyle:
 
 class Clip:
     def __init__(self):
+        self.結月ゆかり = 結月ゆかり(self)
         self.config = None
         self.characters = {"default": CharacterVoice()}
         self.character_images = {}
@@ -74,7 +75,7 @@ class Clip:
         """
         return filetype == "png" or filetype == "jpg" or filetype == "jpeg" or filetype == "gif"
 
-    def main_visual_resize_ratio(self, width, height):
+    def main_visual_resize_ratio(self, width, height,based_on=None):
         """
             メインビジュアルに表示する動画の拡大・縮小率を取得する
         """
@@ -88,6 +89,10 @@ class Clip:
         bg_height = bottom_y - top_y
         height_ratio = bg_height / height
         width_ratio = bg_width / width
+        if based_on == "height":
+            return height_ratio
+        if based_on == "width":
+            return width_ratio
         return width_ratio if width_ratio > height_ratio else height_ratio
 
     def main_visual_fullscreen_resize_ratio(self, width, height):
@@ -162,7 +167,7 @@ class Clip:
         y = self.config["movie"]["background"]["main_vision_left_top_y"]
         main_visual_potision = (x, y)
         # 動画サイズを自動調整する
-        ratio = self.main_visual_resize_ratio(main_visual_clip.w, main_visual_clip.h)
+        ratio = self.main_visual_resize_ratio(main_visual_clip.w, main_visual_clip.h, options["resize_based_on"])
         # フルスクリーン表示の場合
         if options["is_fullscreen"]:
             main_visual_potision = (0,0)
@@ -171,8 +176,8 @@ class Clip:
         main_visual_clip = main_visual_clip.set_position(main_visual_potision)
         main_visual_clip = moviepy.video.fx.resize.resize(main_visual_clip, ratio, ratio)
         main_visual_clip = main_visual_clip.fx(moviepy.audio.fx.all.volumex, float(options["volume"]))
-
-        if options["is_background"]:
+        
+        if options["is_background"] or options["is_green_back"]:
             main_visual_clip = main_visual_clip.fx(vfx.mask_color, color=[0, 255, 0], thr=100, s=5)
 
         return main_visual_clip
@@ -401,11 +406,15 @@ class Clip:
                 "is_same_timing": is_same_timing,
                 "absolute_time":absolute_time,
                 "timing_offset": timing_offset,
+                "pauseMiddl": self.current_character.softwareTalkOptions.pauseMiddle,
+                "pauseLong": self.current_character.softwareTalkOptions.pauseLong,
+                "pauseSentence": self.current_character.softwareTalkOptions.pauseSentence,
+                "masterVolume": self.current_character.softwareTalkOptions.masterVolume,
             }
         })
         print(self.scripts[-1])
 
-    def main_visual(self, path, from_sec=0,to_sec=-1, is_fullscreen=False,is_mute=False, stop=False,volume=0.5):
+    def main_visual(self, path, from_sec=0,to_sec=-1, is_fullscreen=False,is_mute=False, stop=False,volume=0.5,is_green_back=False,resize_based_on=None):
         command = "main_visual"
         if is_fullscreen:
             command = "full_screen_visual"
@@ -421,6 +430,8 @@ class Clip:
                 "stop": stop,
                 "resize_base": "height",
                 "volume": volume,
+                "is_green_back":is_green_back,
+                "resize_based_on": resize_based_on,
             }
         })
 
@@ -439,6 +450,8 @@ class Clip:
                 "stop": stop,
                 "resize_base": "height",
                 "volume": 0,
+                "is_green_back":True,
+                "resize_based_on": None,
             }
         })
 
