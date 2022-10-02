@@ -709,7 +709,7 @@ class Clip:
             get_path(f"./output/{output_filename}"),
             # NVIDIAのGPUが使えたらその設定を使う
             codec="h264_nvenc" if self.config["hasNvidiaGpu"] else "libx264",
-            preset= "fast" if self.config["hasNvidiaGpu"] else "ultrafast",
+            # preset= "fast" if self.config["hasNvidiaGpu"] else "ultrafast",
             audio_codec="aac",
             temp_audiofile="temp-audio.m4a",
             remove_temp=True,
