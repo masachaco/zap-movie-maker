@@ -694,7 +694,7 @@ class Clip:
             start = self.mark[range_by_mark[0]]
             end = self.mark[range_by_mark[1]]
             composit = composit.subclip(start, end)
-        codec = "h264_nvenc" if self.config["hasNvidiaGpu"] else "libx264",
+        codec = "h264_nvenc" if self.config["hasNvidiaGpu"] else "libx264"
         codec_preset = "fast" if self.config["hasNvidiaGpu"] else "ultrafast"
         print("codec:",codec,"preset:",codec_preset)
         # 動画を出力する
