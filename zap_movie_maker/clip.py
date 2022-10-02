@@ -694,13 +694,14 @@ class Clip:
             start = self.mark[range_by_mark[0]]
             end = self.mark[range_by_mark[1]]
             composit = composit.subclip(start, end)
-        
+        codec = "h264_nvenc" if self.config["hasNvidiaGpu"] else "libx264",
+        codec_preset = "fast" if self.config["hasNvidiaGpu"] else "ultrafast"
         # 動画を出力する
         composit.write_videofile(
             get_path(f"./output/{output_filename}"),
             # NVIDIAのGPUが使えたらその設定を使う
-            codec="h264_nvenc" if self.config["hasNvidiaGpu"] else "libx264",
-            preset= "fast" if self.config["hasNvidiaGpu"] else "ultrafast",
+            codec=codec,
+            preset= codec_preset,
             audio_codec="aac",
             temp_audiofile="temp-audio.m4a",
             remove_temp=True,
