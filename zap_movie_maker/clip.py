@@ -696,6 +696,7 @@ class Clip:
             composit = composit.subclip(start, end)
         codec = "h264_nvenc" if self.config["hasNvidiaGpu"] else "libx264",
         codec_preset = "fast" if self.config["hasNvidiaGpu"] else "ultrafast"
+        print("codec:",codec,"preset:",codec_preset)
         # 動画を出力する
         composit.write_videofile(
             get_path(f"./output/{output_filename}"),
