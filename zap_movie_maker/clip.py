@@ -217,15 +217,6 @@ class Clip:
         )
         print("telop:", telop_image_path)
         txtclip = ImageClip(telop_image_path).fx(vfx.mask_color, color=[0, 255, 0], thr=100, s=5).set_start(current_duration).set_duration(1)
-        # txtclip = TextClip(
-        #     f"{telop}",
-        #     method="label",
-        #     size=(2000, 30),
-        #     align="West",
-        #     fontsize=float(text_clip_options["telop_options"]["text_size"]),
-        #     font=font_path,
-        #     color=text_clip_options["telop_options"]["text_color"],
-        # )
 
         # テロップの表示位置
         
@@ -709,7 +700,7 @@ class Clip:
             get_path(f"./output/{output_filename}"),
             # NVIDIAのGPUが使えたらその設定を使う
             codec="h264_nvenc" if self.config["hasNvidiaGpu"] else "libx264",
-            # preset= "fast" if self.config["hasNvidiaGpu"] else "ultrafast",
+            preset= "fast" if self.config["hasNvidiaGpu"] else "ultrafast",
             audio_codec="aac",
             temp_audiofile="temp-audio.m4a",
             remove_temp=True,
