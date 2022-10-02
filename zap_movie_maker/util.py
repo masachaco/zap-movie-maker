@@ -55,7 +55,7 @@ def load_script(path):
 
 
 def get_slide_path(index):
-    return get_path(f"./resource/slide_img/スライド{index}.PNG")
+    return get_path(f"./resource/slide_img/slide{index}.png")
 
 def conv_pptx_to_img(pptx_path):
     pass
