@@ -9,7 +9,6 @@ from .voiceroid2_requests import *
 from .voicevox_options import *
 from .voiceroid2_options import *
 import moviepy.audio.fx.all as afx
-import json
 
 class TelopOptions:
     def __init__(self, text_color: str = "white", text_size: int = 25):
@@ -130,9 +129,20 @@ class Clip:
         # この動画の前に再生している動画の再生時間を、この動画を再生するまでに伸ばす
         if len(clips) > 0:
             past_movie = clips[-1]
-            if past_movie.duration != -1:
-                past_movie_duration = current_duration - past_movie.start
-                clips[-1] = past_movie.set_duration(past_movie_duration)
+            last_video_duration = current_duration - past_movie.start
+
+            if last_video_duration > 0 and past_movie.duration != -1:
+                if past_movie.duration is None or past_movie.duration >= last_video_duration:
+                    clips[-1] = past_movie.set_duration(last_video_duration)
+                else:
+                    stop_movie = past_movie.to_ImageClip(t=past_movie.duration-0.03)
+                    stop_movie = stop_movie.set_start(past_movie.start + past_movie.duration)
+                    stop_movie = stop_movie.set_duration(last_video_duration - past_movie.duration)
+                    x = self.config["movie"]["background"]["main_vision_left_top_x"]
+                    y = self.config["movie"]["background"]["main_vision_left_top_y"]
+                    main_visual_potision = (x, y)
+                    stop_movie = stop_movie.set_position(main_visual_potision)
+                    clips.append(stop_movie)
 
         filetype = movie_filepath.split(".")[-1].lower()
         
@@ -148,16 +158,21 @@ class Clip:
 
         main_visual_clip = None
         if (self.is_imagefile(filetype)):
-            main_visual_clip = ImageClip(movie_filepath).set_start(current_duration).set_duration(1)
+            main_visual_clip = ImageClip(movie_filepath).set_start(current_duration)
         else:
             movie_clip = VideoFileClip(movie_filepath)
+            duration = movie_clip.duration
             from_sec = options["from"]
             to_sec = options["to"]
             if options["stop"]:
-                movie_clip = movie_clip.to_ImageClip(t=from_sec).set_duration(1)
+                movie_clip = movie_clip.to_ImageClip(t=from_sec)
             else:
-                max_duration = movie_clip.duration
-                movie_clip = movie_clip.fl_time(self.cut_func(from_sec, to_sec, max_duration)).set_duration(0)
+                fr = 0 if from_sec < 0 else from_sec
+                to = duration if to_sec < 0 or to_sec > duration else to_sec
+                movie_clip = movie_clip.subclip(fr,to-0.01)
+                movie_clip.fr =  fr
+                movie_clip.to =  to
+
 
             main_visual_clip = movie_clip.set_start(current_duration)
 
@@ -557,26 +572,30 @@ class Clip:
 
         # 最後の動画の再生時間を動画の最後までに設定する
         if len(self.movie["main_visual_clips"]) > 0:
-            last_video_duration = total_duration - self.movie["main_visual_clips"][-1].start
+            past_movie = self.movie["main_visual_clips"][-1]
+            last_video_duration = total_duration - past_movie.start
 
-            if last_video_duration > 0 and self.movie["main_visual_clips"][-1].duration != -1:
-                self.movie["main_visual_clips"][-1] = self.movie["main_visual_clips"][-1].set_duration(last_video_duration)
+            if last_video_duration > 0 and past_movie.duration != -1:
+                if past_movie.duration is None or past_movie.duration >= last_video_duration:
+                    self.movie["main_visual_clips"][-1] = past_movie.set_duration(last_video_duration)
+                else:
+                    stop_movie = past_movie.to_ImageClip(t=past_movie.duration-0.03)
+                    stop_movie = stop_movie.set_start(past_movie.start + past_movie.duration)
+                    stop_movie = stop_movie.set_duration(last_video_duration - past_movie.duration)
+                    x = self.config["movie"]["background"]["main_vision_left_top_x"]
+                    y = self.config["movie"]["background"]["main_vision_left_top_y"]
+                    main_visual_potision = (x, y)
+                    stop_movie = stop_movie.set_position(main_visual_potision)
+                    self.movie["main_visual_clips"].append(stop_movie)
+                    
             output_layers.extend(self.movie["main_visual_clips"])
 
         # 最後の動画の再生時間を動画の最後までに設定する
         if len(self.movie["background_clips"]) > 0:
             last_video_duration = total_duration - self.movie["background_clips"][-1].start
-
             if last_video_duration > 0 and self.movie["background_clips"][-1].duration != -1:
                 self.movie["background_clips"][-1] = self.movie["background_clips"][-1].set_duration(last_video_duration)
             output_layers.extend(self.movie["background_clips"])
-
-        # テロップクリップがあれば出力レイヤに追加
-        if len(self.movie["text_clips"]) > 0:
-            output_layers.extend(self.movie["text_clips"])
-
-        if len(self.movie["absolute_text_clips"]) > 0:
-            output_layers.extend(self.movie["absolute_text_clips"])
 
         # 効果音クリップがあれば出力レイヤに追加
         if len(self.movie["se_clips"]) > 0:
@@ -602,6 +621,13 @@ class Clip:
                         last_character_duration
                     )
                 output_layers.extend(self.movie["character_clips"][character_name])
+
+        # テロップクリップがあれば出力レイヤに追加
+        if len(self.movie["text_clips"]) > 0:
+            output_layers.extend(self.movie["text_clips"])
+
+        if len(self.movie["absolute_text_clips"]) > 0:
+            output_layers.extend(self.movie["absolute_text_clips"])
 
         # 最後の動画の再生時間を動画の最後までに設定する
         if len(self.movie["fullscreen_visual_clips"]) > 0:
@@ -710,7 +736,6 @@ class Clip:
             threads=self.config["numOfThread"],
             write_logfile=True,
         )
-        exit(0)
 
     def preview(self,audio_samp_rate=11000,preview_fps=2,preview_resize=1,range=None, range_by_mark=None,skip_audio_render=False):
         composit = self.composit_movie(skip_audio_render=skip_audio_render)
@@ -724,7 +749,6 @@ class Clip:
         aud = composit.audio.set_fps(audio_samp_rate)
         composit = composit.without_audio().set_audio(aud)
         composit.resize(width=720*preview_resize).preview(fps=preview_fps)
-        exit(0)
     
     def show(self,timing=0):
         composit = self.composit_movie(skip_audio_render=True)
