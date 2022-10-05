@@ -5,7 +5,7 @@ class Voiceroid2Options:
             self, 
             speakerName :str = "琴葉茜", 
             speakerStyle :str = "ノーマル",
-            volume :float = 2.0, 
+            volume :float = 1, 
             speed :float = 1.0, 
             pitch :float = 1.0, 
             intonation: float = 1.0,
@@ -13,7 +13,7 @@ class Voiceroid2Options:
             pauseMiddle : int = 80,
             pauseLong : int = 100,
             pauseSentence : int = 200,
-            voiceroidMasterVolume : float = 1,
+            voiceroidMasterVolume : float = 0.9,
         ):
         self.engine = "voiceroid2"
         if speaker_id is None:

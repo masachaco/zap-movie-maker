@@ -219,7 +219,6 @@ class Clip:
             audioclip = AudioFileClip(get_path(text_clip_options["voice_option"]["audio_file_path"]))
 
 
-
         # Windowsの場合バックスラッシュでファイルパスが切られているとフォントを読み込めないので置換する
         font_path = get_path(self.config["movie"]["text"]["font_normal"]).replace("\\", "/")
         
@@ -242,7 +241,7 @@ class Clip:
             y += 10
         text_position = (x, y)
 
-        txtclip = txtclip.set_duration(float(audioclip.duration)).set_position(text_position).fx(moviepy.audio.fx.all.volumex, float(text_clip_options["volume"]))
+        txtclip = txtclip.set_duration(float(audioclip.duration)).set_position(text_position)
 
         # 読み上げる場合は音声を設定
         if has_audio:
@@ -263,7 +262,7 @@ class Clip:
         # 0より前なら0に寄せる
         # if (start_timing < 0):
         #     start_timing = 0
-
+        txtclip = txtclip.fx(afx.audio_normalize).fx(moviepy.audio.fx.all.volumex, float(text_clip_options["volume"]))
         return txtclip.set_start(t=start_timing, change_end=True)
     
     def create_audio_clip(self, audio_clip_options, current_duration, volume):
@@ -285,7 +284,7 @@ class Clip:
         bgm = bgm.set_fps(44100)
         bgmclip = bgmclip.set_duration(float(bgm.duration))
         bgmclip = bgmclip.set_audio(bgm).set_start(t=current_duration, change_end=True)
-        bgmclip = bgmclip.fx(moviepy.audio.fx.all.volumex, volume)
+        bgmclip = bgmclip.fx(afx.audio_normalize).fx(moviepy.audio.fx.all.volumex, volume)
         return bgmclip
 
 
@@ -357,9 +356,14 @@ class Clip:
         })
         print(self.scripts[-1])
 
-    def voice(self, telop :str,say :str = None,is_same_timing=False,absolute_time=None,timing_offset=None,audio_file_path=None,volume=1.2) -> None:
+    def voice(self, telop :str,say :str = None,is_same_timing=False,absolute_time=None,timing_offset=None,audio_file_path=None,volume=None) -> None:
         if say is None:
             say = telop
+        if volume is None:
+            if audio_file_path is not None:
+                volume = 1
+            else:
+                volume = self.current_character.softwareTalkOptions.masterVolume
 
         self.scripts.append({
             "command": "voice",
@@ -383,7 +387,8 @@ class Clip:
                 "pauseMiddl": self.current_character.softwareTalkOptions.pauseMiddle,
                 "pauseLong": self.current_character.softwareTalkOptions.pauseLong,
                 "pauseSentence": self.current_character.softwareTalkOptions.pauseSentence,
-                "masterVolume": self.current_character.softwareTalkOptions.masterVolume,
+                "masterVolume": 1,
+                "volume": self.current_character.softwareTalkOptions.volume,
             }
         })
         print(self.scripts[-1])
@@ -414,7 +419,8 @@ class Clip:
                 "pauseMiddl": self.current_character.softwareTalkOptions.pauseMiddle,
                 "pauseLong": self.current_character.softwareTalkOptions.pauseLong,
                 "pauseSentence": self.current_character.softwareTalkOptions.pauseSentence,
-                "masterVolume": self.current_character.softwareTalkOptions.masterVolume,
+                "masterVolume": 1,
+                "volume": 1,
             }
         })
         print(self.scripts[-1])
@@ -724,6 +730,9 @@ class Clip:
         codec_preset = "fast" if self.config["hasNvidiaGpu"] else "ultrafast"
         print("codec:",codec,"preset:",codec_preset)
         # 動画を出力する
+        audio = composit.audio.set_fps(48000)
+        composit = composit.set_audio(audio)
+        composit = composit.fx(afx.audio_normalize)
         composit.write_videofile(
             get_path(f"./output/{output_filename}"),
             # NVIDIAのGPUが使えたらその設定を使う

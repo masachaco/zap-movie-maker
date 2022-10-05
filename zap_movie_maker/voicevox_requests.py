@@ -62,9 +62,10 @@ def voice_vox_towav(text, audio_filename, voice_vox_options):
     audio_filepath = get_path(f"./voicevox_wav/{audio_filename}")
     # キャッシュが存在する場合はそれを使う
     if os.path.exists(audio_filepath):
-        return
+        return audio_filepath
 
     voicevoix_audio = get_voicevox_audio(text, voice_vox_options)
     with open(audio_filepath, "wb") as fp:
         fp.write(voicevoix_audio)
+    return audio_filepath
 

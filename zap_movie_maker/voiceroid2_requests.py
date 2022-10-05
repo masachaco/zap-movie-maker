@@ -32,7 +32,7 @@ def voiceroid2_towav(text, audio_filename, voiceroid_options):
         #     "timing_offset": timing_offset
         # }
         # Set parameters
-        vc.param.volume = 2
+        vc.param.volume = float(voiceroid_options["volume"])
         vc.param.speed = float(voiceroid_options["speed"])
         vc.param.pitch = float(voiceroid_options["pitch"])
         vc.param.emphasis = float(voiceroid_options["intonation"])
@@ -49,7 +49,7 @@ def voiceroid2_towav(text, audio_filename, voiceroid_options):
         print("ファイルを出力します",text)
         with open(audio_filepath, "wb") as fp:
             fp.write(speech)
-
+        return audio_filepath
         # Play speech and display phonetic labels simultaneously
         # t = threading.Thread(target=display_phonetic_label, args=(tts_events,))
         # t.start()

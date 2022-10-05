@@ -4,6 +4,7 @@ import win32com.client
 import yaml
 import csv
 import platform
+import subprocess
 
 BASE_PATH = None
 def get_base_path():
@@ -54,10 +55,10 @@ def load_script(path):
         return csv.reader(list(filtered_data))
 
 
-def get_slide_path(index):
-    return get_path(f"./resource/slide_img/スライド{index}.PNG")
+def get_slide_path(slide_id,index):
+    return get_path(f"./resource/slide_img/{slide_id}/スライド{index}.PNG")
 
-def conv_pptx_to_img(pptx_path):
+def conv_pptx_to_img(slide_id,pptx_path):
     os = platform.system()
     if os != "Windows":
         print("現在、パワーポイントの自動画像書き出しはWindowsのみ対応しています")
@@ -69,7 +70,22 @@ def conv_pptx_to_img(pptx_path):
     application = win32com.client.DispatchEx("Powerpoint.Application")
     application.Visible = True
     pp = application.Presentations.open(to_path)
-    pp.Export(get_path("./resource/slide_img/"), FilterName="png")
+    pp.Export(get_path(f"./resource/pptx_img/{slide_id}"), FilterName="png")
     pp.close()
-    # application.quit()
+    application.quit()
 
+def get_pdf_path(slide_id, index):
+    return get_path(f"./resource/pdf_img/{slide_id}/スライド{index}.PNG")
+
+
+def conv_pdf_to_img(slide_id, path):
+    from_path = get_path(path)
+    to_dir_path = get_path(f"./resource/pdf_img/{slide_id}/")
+    if not os.path.exists(to_dir_path):
+        os.mkdir(to_dir_path)
+
+    to_path = get_path(f"./resource/pdf_img/{slide_id}/スライド%d.PNG")
+    binaryPath = os.environ["IMAGEMAGICK_BINARY"]
+    converterPath = binaryPath.replace("magick.exe","convert.exe")
+    command = f"{converterPath} -density 150 -colorspace RGB {from_path} {to_path}"
+    subprocess.run(command, shell=True)
