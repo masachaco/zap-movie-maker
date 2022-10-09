@@ -1,3 +1,4 @@
+from tkinter import font
 import moviepy
 from moviepy.editor import *
 import os
@@ -9,6 +10,8 @@ from .voiceroid2_requests import *
 from .voicevox_options import *
 from .voiceroid2_options import *
 import moviepy.audio.fx.all as afx
+from .exo import *
+from exolib import EXO
 
 class TelopOptions:
     def __init__(self, text_color: str = "white", text_size: int = 25):
@@ -26,25 +29,27 @@ class CharacterVoice:
 class CharacterImageSettings:
     def __init__(self, 
         x=0,
-        y=0,
-        resize=1
+        y=0
         ):
         self.x = x
         self.y = y
-        self.resize = resize
 
 class CharacterImageStyle:
     def __init__(self, 
                 name="ノーマル",
-                image_path="./resource/character/tachie-normal.png"
+                image_path="./resource/character/tachie-normal.png",
+                resize=1
         ):
         self.image_path = image_path
         self.name = name
+        self.resize = resize
 
 
 class Clip:
     def __init__(self):
-        self.config = None
+        self.current_telop_font = ""
+        self.current_telop_position = ()
+        self.current_main_visual_area = ()
         self.characters = {"default": CharacterVoice()}
         self.character_images = {}
         self.current_character = self.characters["default"]
@@ -73,15 +78,15 @@ class Clip:
         """
         return filetype == "png" or filetype == "jpg" or filetype == "jpeg" or filetype == "gif"
 
-    def main_visual_resize_ratio(self, width, height,based_on=None):
+    def main_visual_resize_ratio(self, width, height,based_on=None,main_visual_area=None):
         """
             メインビジュアルに表示する動画の拡大・縮小率を取得する
         """
 
-        top_x = self.config["movie"]["background"]["main_vision_left_top_x"]
-        top_y = self.config["movie"]["background"]["main_vision_left_top_y"]
-        bottom_x = self.config["movie"]["background"]["main_vision_right_bottom_x"]
-        bottom_y = self.config["movie"]["background"]["main_vision_right_bottom_y"]
+        top_x = main_visual_area[0]
+        top_y = main_visual_area[1]
+        bottom_x = main_visual_area[2]
+        bottom_y = main_visual_area[3]
 
         bg_width = bottom_x - top_x
         bg_height = bottom_y - top_y
@@ -138,8 +143,8 @@ class Clip:
                     stop_movie = past_movie.to_ImageClip(t=past_movie.duration-0.03)
                     stop_movie = stop_movie.set_start(past_movie.start + past_movie.duration)
                     stop_movie = stop_movie.set_duration(last_video_duration - past_movie.duration)
-                    x = self.config["movie"]["background"]["main_vision_left_top_x"]
-                    y = self.config["movie"]["background"]["main_vision_left_top_y"]
+                    x = past_movie.pos(0)[0]
+                    y = past_movie.pos(0)[1]
                     main_visual_potision = (x, y)
                     stop_movie = stop_movie.set_position(main_visual_potision)
                     clips.append(stop_movie)
@@ -159,6 +164,7 @@ class Clip:
         main_visual_clip = None
         if (self.is_imagefile(filetype)):
             main_visual_clip = ImageClip(movie_filepath).set_start(current_duration)
+            main_visual_clip.filename = movie_filepath
         else:
             movie_clip = VideoFileClip(movie_filepath)
             duration = movie_clip.duration
@@ -177,11 +183,11 @@ class Clip:
             main_visual_clip = movie_clip.set_start(current_duration)
 
         # メインビジュアルの表示位置(左端)
-        x = self.config["movie"]["background"]["main_vision_left_top_x"]
-        y = self.config["movie"]["background"]["main_vision_left_top_y"]
+        x = options["main_visual_area"][0]
+        y = options["main_visual_area"][1]
         main_visual_potision = (x, y)
         # 動画サイズを自動調整する
-        ratio = self.main_visual_resize_ratio(main_visual_clip.w, main_visual_clip.h, options["resize_based_on"])
+        ratio = self.main_visual_resize_ratio(main_visual_clip.w, main_visual_clip.h, options["resize_based_on"], options["main_visual_area"])
         # フルスクリーン表示の場合
         if options["is_fullscreen"]:
             main_visual_potision = (0,0)
@@ -189,7 +195,9 @@ class Clip:
         
         main_visual_clip = main_visual_clip.set_position(main_visual_potision)
         main_visual_clip = moviepy.video.fx.resize.resize(main_visual_clip, ratio, ratio)
+        main_visual_clip.resize_ratio = ratio
         main_visual_clip = main_visual_clip.fx(moviepy.audio.fx.all.volumex, float(options["volume"]))
+        main_visual_clip.volume = float(options["volume"])
         
         if options["is_background"] or options["is_green_back"]:
             main_visual_clip = main_visual_clip.fx(vfx.mask_color, color=[0, 255, 0], thr=100, s=5)
@@ -214,14 +222,14 @@ class Clip:
                 voice_vox_towav(say, f"{hash}.wav", text_clip_options["voice_option"])
             if text_clip_options["voice_engine"] == "voiceroid2":
                 voiceroid2_towav(say, f"{hash}.wav", text_clip_options["voice_option"])
-            audioclip = AudioFileClip(get_path(f"./voicevox_wav/{hash}.wav"))
+            audioclip = AudioFileClip(get_path(f"./resource/generated_wav/{hash}.wav"))
         else:
             audioclip = AudioFileClip(get_path(text_clip_options["voice_option"]["audio_file_path"]))
 
 
         # Windowsの場合バックスラッシュでファイルパスが切られているとフォントを読み込めないので置換する
-        font_path = get_path(self.config["movie"]["text"]["font_normal"]).replace("\\", "/")
-        
+
+        font_path = get_path(text_clip_options["telop_options"]["font_path"]).replace("\\", "/")
         telop = text_clip_options["telop"]
         telop_image_path = self.create_telop_image(
             text=telop,
@@ -230,12 +238,13 @@ class Clip:
             stroke_fill_color=text_clip_options["telop_options"]["text_color"],
         )
         print("telop:", telop_image_path)
-        txtclip = ImageClip(telop_image_path).fx(vfx.mask_color, color=[0, 255, 0], thr=100, s=5).set_start(current_duration).set_duration(1)
+        txtclip = ImageClip(telop_image_path).set_start(current_duration).set_duration(1)
+        txtclip.filename = telop_image_path
 
         # テロップの表示位置
         
-        x = self.config["movie"]["text"]["x"]
-        y = self.config["movie"]["text"]["y"]
+        x = text_clip_options["telop_options"]["right_top_x"]
+        y = text_clip_options["telop_options"]["right_top_y"]
         if text_clip_options["voice_option"]["is_same_timing"] and len(clips) > 0:
             x += 10
             y += 10
@@ -263,6 +272,8 @@ class Clip:
         # if (start_timing < 0):
         #     start_timing = 0
         txtclip = txtclip.fx(afx.audio_normalize).fx(moviepy.audio.fx.all.volumex, float(text_clip_options["volume"]))
+        txtclip.volume = float(text_clip_options["volume"])
+        txtclip.speaker_id = text_clip_options["voice_option"]["speaker_id"]
         return txtclip.set_start(t=start_timing, change_end=True)
     
     def create_audio_clip(self, audio_clip_options, current_duration, volume):
@@ -278,13 +289,14 @@ class Clip:
             size=(1, 1),
             align="West",
             fontsize=30,
-            font=get_path(self.config["movie"]["text"]["font_normal"]),
+            font=get_path(self.current_telop_font),
             color="white",
         )
         bgm = bgm.set_fps(44100)
         bgmclip = bgmclip.set_duration(float(bgm.duration))
         bgmclip = bgmclip.set_audio(bgm).set_start(t=current_duration, change_end=True)
         bgmclip = bgmclip.fx(afx.audio_normalize).fx(moviepy.audio.fx.all.volumex, volume)
+        bgmclip.volume = volume
         return bgmclip
 
 
@@ -300,25 +312,31 @@ class Clip:
         if character_name not in clips:
             clips[character_name] = []
 
-        char_clips = clips[character_name]
+        # char_clips = clips[character_name]
 
         # この立ち絵の前に再生している立ち絵の再生時間を、この立ち絵を再生するまでに伸ばす
-        if len(char_clips) > 0:
-            past_char = char_clips[-1]
-            past_char_duration = current_duration - past_char.start
-            char_clips[-1] = past_char.set_duration(past_char_duration)
+        # if len(char_clips) > 0:
+        #     past_char = char_clips[-1]
+        #     past_char_duration = current_duration - past_char.start
+        #     char_clips[-1] = past_char.set_duration(past_char_duration)
 
         char_clip = ImageClip(character_style.image_path).set_duration(1)
+        char_clip.filename = character_style.image_path
 
         # 立ち絵を拡大・縮小
-        ratio = character_image.resize
+        ratio = character_style.resize
         char_clip = moviepy.video.fx.resize.resize(char_clip, ratio, ratio)
+        char_clip.resize_ratio = ratio
 
         # 立ち絵の表示位置
         x = character_image.x
         y = character_image.y
         char_position = (x,y)
-        char_clip = char_clip.set_start(current_duration).set_position(char_position)
+        start_time = current_duration
+        if options["absolute_time"] is not None:
+            start_time = options["absolute_time"]
+
+        char_clip = char_clip.set_start(start_time).set_position(char_position)
 
         return char_clip
 
@@ -336,11 +354,11 @@ class Clip:
                 }
             }
 
-    def add_character_style(self,character_name :str="デフォルト", style_name :str="ノーマル", image_path:str="./resource/character/tachie-normal.png"):
+    def add_character_style(self,character_name :str="デフォルト", style_name :str="ノーマル", image_path:str="./resource/character/tachie-normal.png",resize=1.0):
         if character_name not in self.character_images:
             self.add_character(character_name, CharacterImageSettings())
 
-        self.character_images[character_name]["style"][style_name] = CharacterImageStyle(image_path=image_path, name=style_name)
+        self.character_images[character_name]["style"][style_name] = CharacterImageStyle(image_path=image_path, name=style_name, resize=resize)
 
 
     def ch_voice(self, characterName :str):
@@ -356,7 +374,7 @@ class Clip:
         })
         print(self.scripts[-1])
 
-    def voice(self, telop :str,say :str = None,is_same_timing=False,absolute_time=None,timing_offset=None,audio_file_path=None,volume=None) -> None:
+    def voice(self, telop :str,say :str = None,is_same_timing=False,absolute_time=None,timing_offset=None,audio_file_path=None,volume=None,telop_positon=None,font_path=None,font_size=None,font_color=None) -> None:
         if say is None:
             say = telop
         if volume is None:
@@ -364,14 +382,32 @@ class Clip:
                 volume = 1
             else:
                 volume = self.current_character.softwareTalkOptions.masterVolume
+        if telop_positon is None:
+            telop_positon = (
+                self.current_telop_position[0],
+                self.current_telop_position[1],
+            )
+
+        if font_path is None:
+            font_path = self.current_telop_font
+        
+        if font_size is None:
+            font_size = self.current_character.telopOptions.text_size
+        
+        if font_color is None:
+            font_color = self.current_character.telopOptions.text_color
+
 
         self.scripts.append({
             "command": "voice",
             "telop": telop,
             "voice_engine": self.current_character.softwareTalkOptions.engine,
             "telop_options": {
-                "text_color":  self.current_character.telopOptions.text_color,
-                "text_size":  self.current_character.telopOptions.text_size,
+                "text_color":  font_color,
+                "text_size":  font_size,
+                "font_path": font_path,
+                "right_top_x": telop_positon[0],
+                "right_top_y": telop_positon[1],
             },
             "volume": volume,
             "voice_option": {
@@ -393,17 +429,35 @@ class Clip:
         })
         print(self.scripts[-1])
 
-    def text(self, telop :str,say :str = None,is_same_timing=False,absolute_time=None,timing_offset=None,audio_file_path=None) -> None:
+    def text(self, telop :str,say :str = None,is_same_timing=False,absolute_time=None,timing_offset=None,audio_file_path=None,telop_positon=None,font_path=None,font_size=None,font_color=None) -> None:
         if say is None:
             say = telop
+
+        if telop_positon is None:
+            telop_positon = (
+                self.current_telop_position[0],
+                self.current_telop_position[1],
+            )
+
+        if font_path is None:
+            font_path = self.current_telop_font
+        
+        if font_size is None:
+            font_size = self.current_character.telopOptions.text_size
+        
+        if font_color is None:
+            font_color = self.current_character.telopOptions.text_color
 
         self.scripts.append({
             "command": "text",
             "telop": telop,
             "voice_engine": self.current_character.softwareTalkOptions.engine,
             "telop_options": {
-                "text_color":  self.current_character.telopOptions.text_color,
-                "text_size":  self.current_character.telopOptions.text_size,
+                "text_color":  font_color,
+                "text_size":  font_size,
+                "font_path": font_path,
+                "right_top_x": telop_positon[0],
+                "right_top_y": telop_positon[1],
             },
             "volume": 0,
             "voice_option": {
@@ -425,10 +479,20 @@ class Clip:
         })
         print(self.scripts[-1])
 
-    def main_visual(self, path, from_sec=0,to_sec=-1, is_fullscreen=False,is_mute=False, stop=False,volume=0.5,is_green_back=False,resize_based_on=None):
+    def main_visual(self, path, from_sec=0,to_sec=-1, is_fullscreen=False,is_mute=False, stop=False,volume=0.5,is_green_back=False,resize_based_on=None,main_visual_area=None):
         command = "main_visual"
         if is_fullscreen:
             command = "full_screen_visual"
+
+        main_visual_area = self.current_main_visual_area
+        if main_visual_area is not None:
+            main_visual_area = (
+                main_visual_area[0],
+                main_visual_area[1],
+                main_visual_area[2],
+                main_visual_area[3],
+            )
+
         self.scripts.append({
             "command": command,
             "filepath": path,
@@ -443,36 +507,55 @@ class Clip:
                 "volume": volume,
                 "is_green_back":is_green_back,
                 "resize_based_on": resize_based_on,
+                "main_visual_area": main_visual_area
             }
         })
 
 
-    def back_ground(self, path, from_sec=0,to_sec=-1,is_mute=False, stop=False):
-        command = "back_ground"
+    def set_display_settings(self,
+        background_path,
+        main_visual_area,
+        telop_position,
+        telop_font):
+        
+        command = "display_settings"
+        self.current_main_visual_area = (
+            main_visual_area[0],
+            main_visual_area[1],
+            main_visual_area[2],
+            main_visual_area[3],
+        )
+        self.current_telop_position = (
+            telop_position[0],
+            telop_position[1]
+        )
+        self.current_telop_font = telop_font
         self.scripts.append({
             "command": command,
-            "filepath": path,
+            "filepath": background_path,
             "options": {
-                "from": from_sec,
-                "to": to_sec,
+                "from": 0,
+                "to": -1,
                 "is_background": True,
                 "is_fullscreen": True,
-                "is_mute": is_mute,
-                "stop": stop,
+                "is_mute": False,
+                "stop": False,
                 "resize_base": "height",
                 "volume": 0,
                 "is_green_back":True,
                 "resize_based_on": None,
+                "main_visual_area": self.current_main_visual_area
             }
         })
 
-    def char(self, name :str="デフォルト", style: str="ノーマル"):
+    def char(self, name :str="デフォルト", style: str="ノーマル",absolute_time=None):
         self.scripts.append({
             "command": "char",
             "options": {
                 "name": name,
                 "style": self.character_images[name]["style"][style],
-                "image_settings": self.character_images[name]["image_settings"]
+                "image_settings": self.character_images[name]["image_settings"],
+                "absolute_time":absolute_time,
             }
         })
         pass
@@ -502,20 +585,13 @@ class Clip:
         pass
 
     def composit_movie(self,skip_audio_render=False):
-        if not os.path.exists(get_path(f"./config.yml")):
-            print("プロジェクト設定(config.yml)が存在しません。config.ymlを作成してください")
-            print("プロジェクト設定(config.yml)の作成方法はREADME.mdを確認してください。")
-            exit(1)
-
-        self.config = load_conf(get_path(f"./config.yml"))
-        print(self.config)
         # 動画の長さや、各種クリップ
 
         # スクリプトごとに編集処理を順次実行していく
         for script in self.scripts:
             command = script["command"]
             print("command:", command)
-            if command == "back_ground":
+            if command == "display_settings":
                 background_clips = self.create_main_visual_clip(self.movie["background_clips"], self.movie["current_duration"], script["filepath"], script["options"])
                 self.movie["background_clips"].append(background_clips)
                 pass                
@@ -528,7 +604,6 @@ class Clip:
                 self.movie["main_visual_clips"].append(main_visual_clip)
                 pass
             if command == "char":
-                # TODO: ここ修正
                 character_clip = self.create_character_clip(self.movie["character_clips"], self.movie["current_duration"], script["options"])
                 self.movie["character_clips"][script["options"]["name"]].append(character_clip)
                 pass
@@ -569,8 +644,7 @@ class Clip:
                 pass
 
         # 動画の総再生時間
-        additional_time = self.config["movie"]["additional_time"]
-        total_duration = float(self.movie["current_duration"]) + float(additional_time)
+        total_duration = float(self.movie["current_duration"])
         print("総再生時間：", total_duration)
 
         # 動画の出力レイヤ
@@ -588,8 +662,8 @@ class Clip:
                     stop_movie = past_movie.to_ImageClip(t=past_movie.duration-0.03)
                     stop_movie = stop_movie.set_start(past_movie.start + past_movie.duration)
                     stop_movie = stop_movie.set_duration(last_video_duration - past_movie.duration)
-                    x = self.config["movie"]["background"]["main_vision_left_top_x"]
-                    y = self.config["movie"]["background"]["main_vision_left_top_y"]
+                    x = past_movie.pos(0)[0]
+                    y = past_movie.pos(0)[1]
                     main_visual_potision = (x, y)
                     stop_movie = stop_movie.set_position(main_visual_potision)
                     self.movie["main_visual_clips"].append(stop_movie)
@@ -620,12 +694,16 @@ class Clip:
         # 立ち絵クリップがあれば出力レイヤに追加
         for character_name in self.movie["character_clips"].keys():
             if len(self.movie["character_clips"][character_name]) > 0:
-                # 最後キャラクタ表示時間を動画の最後までに設定する
-                last_character_duration = total_duration - self.movie["character_clips"][character_name][-1].start
-                if last_character_duration > 0 :
-                    self.movie["character_clips"][character_name][-1] = self.movie["character_clips"][character_name][-1].set_duration(
-                        last_character_duration
-                    )
+                self.movie["character_clips"][character_name] = sorted(self.movie["character_clips"][character_name], key=lambda m: m.start)
+                for i,current_movie in enumerate(self.movie["character_clips"][character_name]):
+                    if i == len(self.movie["character_clips"][character_name])-1:
+                        last_character_duration = total_duration - current_movie.start
+                        if last_character_duration > 0 :
+                            self.movie["character_clips"][character_name][i] = current_movie.set_duration(last_character_duration)
+                    if i == 0:
+                        continue
+                    new_duration = current_movie.start - self.movie["character_clips"][character_name][i-1].start
+                    self.movie["character_clips"][character_name][i-1] = self.movie["character_clips"][character_name][i-1].set_duration(new_duration)
                 output_layers.extend(self.movie["character_clips"][character_name])
 
         # テロップクリップがあれば出力レイヤに追加
@@ -718,7 +796,7 @@ class Clip:
 
         return new_bgm_clips
 
-    def create_movie(self,output_filename="movie.mp4",fps=24,range=None, range_by_mark=None):
+    def create_movie(self,output_filename="./output/movie.mp4",fps=24,range=None, range_by_mark=None, useNvidiaGpuRendering=False):
         composit = self.composit_movie()
         if range is not None:
             composit = composit.subclip(range[0], range[1])
@@ -726,24 +804,23 @@ class Clip:
             start = self.mark[range_by_mark[0]]
             end = self.mark[range_by_mark[1]]
             composit = composit.subclip(start, end)
-        codec = "h264_nvenc" if self.config["hasNvidiaGpu"] else "libx264"
-        codec_preset = "fast" if self.config["hasNvidiaGpu"] else "ultrafast"
+        # NVIDIAのGPUが使えたらその設定を使う
+        codec = "h264_nvenc" if useNvidiaGpuRendering else "libx264"
+        codec_preset = "fast" if useNvidiaGpuRendering else "ultrafast"
         print("codec:",codec,"preset:",codec_preset)
         # 動画を出力する
         audio = composit.audio.set_fps(48000)
         composit = composit.set_audio(audio)
         composit = composit.fx(afx.audio_normalize)
         composit.write_videofile(
-            get_path(f"./output/{output_filename}"),
-            # NVIDIAのGPUが使えたらその設定を使う
+            output_filename,
             codec=codec,
             preset= codec_preset,
             audio_codec="aac",
             temp_audiofile="temp-audio.m4a",
             remove_temp=True,
             fps=fps,
-            threads=self.config["numOfThread"],
-            write_logfile=True,
+            write_logfile=False,
         )
 
     def preview(self,audio_samp_rate=11000,preview_fps=2,preview_resize=1,range=None, range_by_mark=None,skip_audio_render=False):
@@ -766,3 +843,203 @@ class Clip:
     def v(self,style="四国めたん",text="",say=None,is_same_timing=False,absolute_time=None,timing_offset=None,audio_file_path=None):
         self.ch_voice(style)
         self.voice(text,say,is_same_timing,absolute_time,timing_offset,audio_file_path=audio_file_path)
+    
+    def set_preset_voice(self, preset_json):
+        for preset in preset_json:
+            vop = None
+            if preset["engine"] == "voiceroid":
+                vop = Voiceroid2Options(speakerName=preset["speaker_name"],speakerStyle=preset["speaker_style"],speed=preset["speed"],intonation=preset["intonation"],pitch=preset["pitch"])
+            elif preset["engine"] == "voicevox":
+                vop = VoicevoxOptions(speakerName=preset["speaker_name"],speakerStyle=preset["speaker_style"],speed=preset["speed"],intonation=preset["intonation"],pitch=preset["pitch"])
+            top = TelopOptions(text_color=preset["color"],text_size=37)
+            voiceConfig=CharacterVoice(vop,top)
+            self.set_voice(preset["preset_name"], voiceConfig)
+
+    def set_characters(self,preset_json):
+        # # キャラクタの初期設定
+        for preset in preset_json:
+            character_name = preset["character_name"]
+            position_x = preset["position_x"]
+            position_y = preset["position_y"]
+            self.add_character(character_name, CharacterImageSettings(x=int(position_x),y=int(position_y)))
+            for style in preset["styles"]:
+                self.add_character_style(character_name, style_name=style["style_name"],image_path=get_path(style["image_file_path"]),resize=0.3)
+
+    def set_display_fullscreen_setting(self):
+        self.set_display_settings(
+            background_path=get_path("./resource/bg/fullscreen.png"),
+            main_visual_area=(0,0,1280,720),
+            telop_position=(22,618),
+            telop_font=get_path("./resource/fonts/Noto_Sans_JP/NotoSansJP-Black.otf")
+        )
+    def set_display_signage_setting(self):
+        self.set_display_settings(
+            background_path=get_path("./resource/bg/keiba_bg.png"),
+            main_visual_area=(37,20,934,544),
+            telop_position=(22,618),
+            telop_font=get_path("./resource/fonts/Noto_Sans_JP/NotoSansJP-Black.otf")
+        )        
+
+    def create_movie_from_csv(self, csv_str):
+        # 背景を設定
+        self.set_display_signage_setting()
+        
+        # CSVの読み込み
+        splitted_csv = csv_str.split("\n")
+        
+        # 空行とコメント行はスキップ
+        filtered_data = filter(lambda txt: (not txt.strip().startswith("#")) and (not txt.strip() == ""),splitted_csv)
+
+        # CSVをパース
+        csv_lines = csv.reader(list(filtered_data))
+        scripts = []
+        for line in csv_lines:
+            scripts.append(line)
+
+        # パワポを画像に変換
+        for script in scripts:
+            command = script[0].strip()
+            if command == "load_power_point":
+                path = script[1].strip()
+                conv_pptx_to_img(path)
+
+        # キャラクタ設定の読み込み
+        for script in scripts:
+            command = script[0].strip()
+            if command == "char_setting":
+                selected_char = script[1].strip()
+                x = script[2].strip()
+                y = script[3].strip()
+                self.add_character(selected_char, CharacterImageSettings(x=int(x),y=int(y)))
+
+            if command == "char" or command == "abs_char":
+                selected_char = script[1].strip()
+                style = script[2].strip()
+                resize = float(script[3].strip())
+                self.add_character_style(selected_char, style_name=get_path(style),image_path=get_path(style),resize=resize)
+
+        # スクリプトに沿って動画を作成していく
+        bf_time = 0
+        for script in scripts:
+            command = script[0].strip()
+            if command == "main":
+                path = script[1].strip()
+                self.main_visual(get_path(path),volume=0.3)
+
+            if command == "slide":
+                slide_no = script[1].strip()
+                self.main_visual(get_path(get_slide_path(slide_no)))
+
+            if command == "char":
+                selected_char = script[1].strip()
+                style = script[2].strip()
+                self.char(selected_char,get_path(style))
+
+            if command == "abs_char":
+                selected_char = script[1].strip()
+                style = script[2].strip()
+                resize = float(script[3].strip())
+                time = script[4].strip()
+                if str(time).strip() == "bf":
+                    time = bf_time
+                self.char(selected_char,get_path(style),absolute_time=time,)
+
+            if command == "voice" or command == "douji_voice":
+                selected_char = script[1].strip()
+                text=script[2].strip()
+                say=script[3].strip()
+                if len(say) == 0:
+                    say = text
+                self.v(selected_char,text, say, is_same_timing=(command == "douji_voice"))
+
+            if command == "abs_voice":
+                selected_char = script[1].strip()
+                text=script[2].strip()
+                say=script[3].strip()
+                time=script[4].strip()
+                bf_time=time
+                if len(say) == 0:
+                    say = text
+                print(selected_char,text,say,time)
+                self.v(selected_char,text, say, is_same_timing=(command == "douji_voice"),absolute_time=float(time))
+
+            if command == "text":
+                selected_char = script[1].strip()
+                say=script[2].strip()
+                text=script[3].strip()
+                self.ch_voice(selected_char)
+                self.text(text, say)
+
+            if command == "abs_text":
+                selected_char = script[1].strip()
+                text=script[2].strip()
+                say=script[3].strip()
+                time=script[4].strip()
+                bf_time=time
+                if len(say) == 0:
+                    say = text
+                self.ch_voice(selected_char)
+                self.text(text, say,absolute_time=float(time))
+
+            if command == "bgm":
+                self.bgm(get_path(script[1].strip()))
+
+            if command == "se":
+                self.se(get_path(script[1].strip()))
+
+            if command == "wait":
+                self.wait(script[1].strip())
+
+        #     if command == "show":
+        #         print("\n\nプレビューを終了するには、この画面でCtrl + C を複数回押してください。")
+        #         self.show()
+        #         exit(0)
+
+        #     if command == "preview":
+        #         self.preview()
+        #         exit(0)
+        # # self.preview()
+        # exit(0)
+        # 動画を生成する
+        # to_aviutil_exo(this)
+        # self.create_movie()
+
+    def to_aviutil_exo(self, outputfile_name):
+        self.composit_movie()
+
+        with open(outputfile_name, "w", encoding="cp932") as stream:
+            exo = EXO(width=1280, height=720, rate=24)
+            main_visual_clips(exo,self.movie["main_visual_clips"],1,2)
+
+            background_clips(exo,self.movie["background_clips"],3)
+            # 10まではメインレイヤー
+
+            # 11～25はキャラクターレイヤー(15キャラクター分)
+            layer=10
+            for charName in self.movie["character_clips"].keys():
+                layer+=1
+                character_clips(exo,self.movie["character_clips"][charName],layer)
+            
+            #26～40はテロップのレイヤー(15キャラクター分)
+            #41～55はキャラクターの音声レイヤー(15キャラクター分)
+            layer=31
+            VOICE_RAYER_MAP = {"max_9bef0e58_96ec_41c5_b091_acf4b7586e55":0,}
+            text_clip_list = []
+            text_clip_list.extend(self.movie["text_clips"])
+            text_clip_list.extend(self.movie["absolute_text_clips"])
+            text_clips(exo, text_clip_list,26, 41, VOICE_RAYER_MAP)
+
+            # 56～75 はbgmレイヤー(20件)
+            layer+=2
+            BGM_RAYER_MAP = {"max_9bef0e58_96ec_41c5_b091_acf4b7586e55":0,}
+            audio_clips(exo,self.movie["bgm_clips"], 56,BGM_RAYER_MAP)
+
+            # 76～95 はseレイヤー(20件)
+            layer+=1
+            SE_RAYER_MAP = {"max_9bef0e58_96ec_41c5_b091_acf4b7586e55":0,}
+            audio_clips(exo,self.movie["se_clips"], 76, SE_RAYER_MAP)
+            
+            # 96/97は全画面用レイヤー(1件)
+            layer+=1
+            main_visual_clips(exo,self.movie["fullscreen_visual_clips"],96, 97)
+            exo.dump(stream)

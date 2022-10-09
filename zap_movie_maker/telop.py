@@ -13,7 +13,7 @@ def create_fuchidori_telop_image(text,font_path,font_size,fill_color="white",str
     if os.path.exists(output_path):
         return output_path
 
-    im = Image.new('RGB', (1200, 100), '#00FF00')
+    im = Image.new('RGBA', (1200, 100))
     id = ImageDraw.Draw(im)
     font = ImageFont.truetype(font_path,int(font_size))
     id.multiline_text((7, 10), text,font=font, fill=background_color, stroke_width=back_ground_stroke_width)

@@ -59,7 +59,7 @@ def voice_vox_towav(text, audio_filename, voice_vox_options):
     VOICEVOXから音声を生成してファイルに保存
     """
 
-    audio_filepath = get_path(f"./voicevox_wav/{audio_filename}")
+    audio_filepath = get_path(f"./resource/generated_wav/{audio_filename}")
     # キャッシュが存在する場合はそれを使う
     if os.path.exists(audio_filepath):
         return audio_filepath

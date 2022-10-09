@@ -1,6 +1,6 @@
 resource/*
 image_magick/*
-voicevox_wav/*
+resource/generated_wav/*
 resource/psd/*
 output/*
 # Byte-compiled / optimized / DLL files
